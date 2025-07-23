@@ -1,0 +1,191 @@
+@model IdeaIndexViewModel
+@{
+    ViewData["Title"] = "My Ideas";
+}
+
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-0">My Ideas</h1>
+            <p class="text-muted">Track and manage your submitted ideas</p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Submit New Idea
+        </a>
+    </div>
+</div>
+
+<!-- Stats Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="small-stat-card">
+            <div class="stat-number text-primary">@Model.TotalIdeas</div>
+            <div class="stat-label">Total Ideas</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="small-stat-card">
+            <div class="stat-number text-warning">@Model.PendingIdeas</div>
+            <div class="stat-label">Pending</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="small-stat-card">
+            <div class="stat-number text-success">@Model.ApprovedIdeas</div>
+            <div class="stat-label">Approved</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="small-stat-card">
+            <div class="stat-number text-info">@(Model.TotalIdeas - Model.PendingIdeas - Model.ApprovedIdeas)</div>
+            <div class="stat-label">Others</div>
+        </div>
+    </div>
+</div>
+
+<!-- Ideas Table -->
+<div class="card">
+    <div class="card-body">
+        @if (Model.Ideas.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Event</th>
+                            <th>Saving Cost</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var idea in Model.Ideas)
+                        {
+                            <tr>
+                                <td><span class="badge bg-light text-dark">#@idea.Id</span></td>
+                                <td>
+                                    <div class="idea-title">@idea.IdeaName</div>
+                                    @if (!string.IsNullOrEmpty(idea.IdeaIssueBackground))
+                                    {
+                                        <small class="text-muted">@idea.IdeaIssueBackground.Substring(0, Math.Min(50, idea.IdeaIssueBackground.Length))...</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (idea.Category != null)
+                                    {
+                                        <span class="badge bg-info">@idea.Category.NamaCategory</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (idea.Event != null)
+                                    {
+                                        <span class="badge bg-secondary">@idea.Event.NamaEvent</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (idea.SavingCost.HasValue)
+                                    {
+                                        <span class="fw-bold text-success">@idea.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var statusClass = idea.CurrentStatus switch
+                                        {
+                                            "Submitted" => "bg-primary",
+                                            "Under Review" => "bg-warning",
+                                            "Approved" => "bg-success",
+                                            "Rejected" => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @statusClass">@(idea.CurrentStatus ?? "Submitted")</span>
+                                </td>
+                                <td>
+                                    <small>@idea.SubmittedDate.ToString("MMM dd, yyyy")</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Details" asp-route-id="@idea.Id" class="btn btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        @if (idea.CurrentStatus == "Submitted")
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@idea.Id" class="btn btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" title="Delete" 
+                                                    onclick="confirmDelete(@idea.Id, '@idea.IdeaName')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state text-center py-5">
+                <i class="bi bi-lightbulb display-1 text-muted"></i>
+                <h4 class="mt-3">No Ideas Yet</h4>
+                <p class="text-muted">You haven't submitted any ideas yet. Start sharing your innovative thoughts!</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Submit Your First Idea
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the idea <strong id="ideaName"></strong>?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(ideaId, ideaTitle) {
+            document.getElementById('ideaName').textContent = ideaTitle;
+            document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + ideaId;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+}

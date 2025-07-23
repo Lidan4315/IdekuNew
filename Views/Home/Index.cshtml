@@ -1,0 +1,83 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="dashboard">
+    <!-- Header -->
+    <div class="page-header mb-4">
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <p class="text-muted">Welcome back! Here's what's happening with your ideas.</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card bg-primary">
+                <div class="stat-icon">
+                    <i class="bi bi-lightbulb"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>@ViewBag.TotalIdeas</h3>
+                    <p>Total Ideas</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="stat-card bg-warning">
+                <div class="stat-icon">
+                    <i class="bi bi-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>@ViewBag.PendingIdeas</h3>
+                    <p>Pending Review</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="stat-card bg-success">
+                <div class="stat-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>@ViewBag.ApprovedIdeas</h3>
+                    <p>Approved</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="action-card">
+                <div class="card-icon bg-primary">
+                    <i class="bi bi-plus-circle"></i>
+                </div>
+                <div class="card-content">
+                    <h5>Submit New Idea</h5>
+                    <p class="text-muted">Have a brilliant idea? Share it with the team and make an impact.</p>
+                    <a asp-controller="Idea" asp-action="Create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Submit Idea
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="action-card">
+                <div class="card-icon bg-info">
+                    <i class="bi bi-list-task"></i>
+                </div>
+                <div class="card-content">
+                    <h5>My Ideas</h5>
+                    <p class="text-muted">Track the progress of your submitted ideas and see their status.</p>
+                    <a asp-controller="Idea" asp-action="Index" class="btn btn-outline-primary">
+                        <i class="bi bi-eye me-2"></i>View Ideas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
