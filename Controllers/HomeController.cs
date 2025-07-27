@@ -10,27 +10,26 @@ namespace Ideku.Controllers
     public class HomeController : Controller
     {
         private readonly IdeaService _ideaService;
+        private readonly AuthService _authService;
 
-        public HomeController(IdeaService ideaService)
+        public HomeController(IdeaService ideaService, AuthService authService)
         {
             _ideaService = ideaService;
+            _authService = authService;
         }
 
         public async Task<IActionResult> Index()
         {
             try
             {
-                // Get current user
-                var currentUser = User.Identity?.Name ?? "";
-                
-                // Get user's idea statistics
-                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUser);
+                // 🔥 FIX: Mengambil statistik global untuk semua ide
+                var (total, pending, approved) = await _ideaService.GetGlobalIdeaStatsAsync();
 
                 // Pass data ke View via ViewBag
                 ViewBag.TotalIdeas = total;
                 ViewBag.PendingIdeas = pending;
                 ViewBag.ApprovedIdeas = approved;
-                ViewBag.CurrentUser = currentUser;
+                ViewBag.CurrentUser = User.Identity?.Name ?? "User";
 
                 return View();
             }
@@ -62,8 +61,8 @@ namespace Ideku.Controllers
         {
             try
             {
-                var currentUser = User.Identity?.Name ?? "";
-                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUser);
+                // 🔥 FIX: Mengambil statistik global untuk semua ide
+                var (total, pending, approved) = await _ideaService.GetGlobalIdeaStatsAsync();
 
                 return Json(new { 
                     success = true, 

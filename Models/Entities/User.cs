@@ -17,8 +17,8 @@ namespace Ideku.Models.Entities
         public Employee Employee { get; set; } = null!;
 
         [Required]
-        [Column("role_id")]
-        public int RoleId { get; set; }
+        [Column("role_id", TypeName = "varchar(10)")]
+        public string RoleId { get; set; } = string.Empty;
 
         [ForeignKey("RoleId")]
         public Role Role { get; set; } = null!;

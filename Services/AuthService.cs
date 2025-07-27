@@ -27,5 +27,22 @@ namespace Ideku.Services
         {
             return await _userRepository.GetEmployeeByBadgeAsync(badgeNumber);
         }
+
+        public async Task<string?> GetCurrentUserBadgeNumberAsync(System.Security.Claims.ClaimsPrincipal user)
+        {
+            if (user?.Identity?.IsAuthenticated != true)
+            {
+                return null;
+            }
+
+            var username = user.Identity.Name;
+            if (string.IsNullOrEmpty(username))
+            {
+                return null;
+            }
+
+            var appUser = await _userRepository.GetByUsernameAsync(username);
+            return appUser?.EmployeeId;
+        }
     }
 }

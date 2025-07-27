@@ -48,7 +48,8 @@ namespace Ideku.Controllers
                 var currentUser = User.Identity?.Name ?? "";
                 var user = await _authService.AuthenticateAsync(currentUser);
                 
-                if (user?.Role.RoleName != "Manager" && user?.Role.RoleName != "SuperAdmin")
+                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+                if (user?.Role == null || !allowedRoles.Contains(user.Role.Id))
                 {
                     TempData["ErrorMessage"] = "You don't have permission to validate ideas.";
                     return RedirectToAction("Index", "Home");
@@ -198,8 +199,9 @@ namespace Ideku.Controllers
                 // Check if user has validation rights
                 var currentUser = User.Identity?.Name ?? "";
                 var user = await _authService.AuthenticateAsync(currentUser);
-                
-                if (user?.Role.RoleName != "Manager" && user?.Role.RoleName != "SuperAdmin")
+
+                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+                if (user?.Role == null || !allowedRoles.Contains(user.Role.Id))
                 {
                     TempData["ErrorMessage"] = "You don't have permission to view validation list.";
                     return RedirectToAction("Index", "Home");

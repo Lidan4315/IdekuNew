@@ -37,6 +37,15 @@ builder.Services.AddAuthentication("MyCookieAuth").AddCookie("MyCookieAuth", opt
     options.SlidingExpiration = true;
 });
 
+// 🔥 NEW: Add Session services for TempData
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(20);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -48,6 +57,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseSession(); // 🔥 NEW: Enable session middleware
 
 app.UseRouting();
 
@@ -89,12 +100,28 @@ static void SeedDatabase(IServiceProvider services)
         return; // DB has been seeded
     }
 
-    // Seed Roles
+    // 🔥 NEW: Seed Roles with proper hierarchy and IDs
     var roles = new[]
     {
-        new Ideku.Models.Entities.Role { RoleName = "SuperAdmin", Description = "Administrator" },
-        new Ideku.Models.Entities.Role { RoleName = "User", Description = "Regular User" },
-        new Ideku.Models.Entities.Role { RoleName = "Manager", Description = "Manager" }
+        new Ideku.Models.Entities.Role { Id = "R01", RoleName = "Superuser", Description = "System Superuser" },
+        new Ideku.Models.Entities.Role { Id = "R02", RoleName = "Admin", Description = "System Administrator" },
+        new Ideku.Models.Entities.Role { Id = "R03", RoleName = "Initiator", Description = "Idea Initiator" },
+        new Ideku.Models.Entities.Role { Id = "R04", RoleName = "Workstream Leader", Description = "Workstream Leader" },
+        new Ideku.Models.Entities.Role { Id = "R05", RoleName = "Implementor", Description = "Idea Implementor" },
+        new Ideku.Models.Entities.Role { Id = "R06", RoleName = "Mgr. Dept", Description = "Department Manager" },
+        new Ideku.Models.Entities.Role { Id = "R07", RoleName = "GM Division", Description = "General Manager Division" },
+        new Ideku.Models.Entities.Role { Id = "R08", RoleName = "GM Finance", Description = "General Manager Finance" },
+        new Ideku.Models.Entities.Role { Id = "R09", RoleName = "GM BPID", Description = "General Manager BPID" },
+        new Ideku.Models.Entities.Role { Id = "R10", RoleName = "COO", Description = "Chief Operating Officer" },
+        new Ideku.Models.Entities.Role { Id = "R11", RoleName = "SCFO", Description = "Senior Chief Financial Officer" },
+        new Ideku.Models.Entities.Role { Id = "R12", RoleName = "CEO", Description = "Chief Executive Officer" },
+        new Ideku.Models.Entities.Role { Id = "R13", RoleName = "GM Division Act.", Description = "GM Division Acting" },
+        new Ideku.Models.Entities.Role { Id = "R14", RoleName = "GM Finance Act.", Description = "GM Finance Acting" },
+        new Ideku.Models.Entities.Role { Id = "R15", RoleName = "GM BPID Act.", Description = "GM BPID Acting" },
+        new Ideku.Models.Entities.Role { Id = "R16", RoleName = "Mgr. Dept. Act.", Description = "Department Manager Acting" },
+        new Ideku.Models.Entities.Role { Id = "R17", RoleName = "COO Act.", Description = "COO Acting" },
+        new Ideku.Models.Entities.Role { Id = "R18", RoleName = "CEO Act.", Description = "CEO Acting" },
+        new Ideku.Models.Entities.Role { Id = "R19", RoleName = "SCFO Act.", Description = "SCFO Acting" }
     };
     context.Roles.AddRange(roles);
     context.SaveChanges();
@@ -218,13 +245,13 @@ static void SeedDatabase(IServiceProvider services)
     context.Employees.AddRange(employees);
     context.SaveChanges();
 
-    // Seed Sample Users
+    // 🔥 UPDATED: Seed Sample Users with new Role IDs
     var users = new[]
     {
         new Ideku.Models.Entities.User
         {
             EmployeeId = "EMP001",
-            RoleId = 2, // User role
+            RoleId = "R03", // Initiator role
             Username = "john.doe",
             Name = "John Doe",
             FlagActing = false
@@ -232,7 +259,7 @@ static void SeedDatabase(IServiceProvider services)
         new Ideku.Models.Entities.User
         {
             EmployeeId = "EMP002",
-            RoleId = 3, // Manager role (can validate)
+            RoleId = "R06", // Mgr. Dept role
             Username = "jane.smith",
             Name = "Jane Smith",
             FlagActing = false
@@ -240,7 +267,7 @@ static void SeedDatabase(IServiceProvider services)
         new Ideku.Models.Entities.User
         {
             EmployeeId = "EMP003",
-            RoleId = 2, // User role
+            RoleId = "R03", // Initiator role
             Username = "alice.johnson",
             Name = "Alice Johnson",
             FlagActing = false
@@ -248,7 +275,7 @@ static void SeedDatabase(IServiceProvider services)
         new Ideku.Models.Entities.User
         {
             EmployeeId = "EMP004",
-            RoleId = 2, // User role
+            RoleId = "R02", // Admin role
             Username = "bob.wilson",
             Name = "Bob Wilson",
             FlagActing = false

@@ -38,19 +38,114 @@ namespace Ideku.Controllers
             _logger = logger;
         }
 
-        // GET: /Idea/Index - Tampilkan daftar ideas user
-        public async Task<IActionResult> Index()
+        // 🔥 NEW: API endpoint untuk mendapatkan departements berdasarkan division
+        [HttpGet]
+        public async Task<IActionResult> GetDepartmentsByDivision(string divisionId)
         {
             try
             {
-                var currentUser = User.Identity?.Name ?? "";
-                var ideas = await _ideaService.GetUserIdeasAsync(currentUser);
-                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUser);
+                if (string.IsNullOrEmpty(divisionId))
+                {
+                    return Json(new { success = false, message = "Division ID is required" });
+                }
+
+                var departments = await _context.Departement
+                    .Where(d => d.DivisiId == divisionId)
+                    .Include(d => d.Divisi)
+                    .Select(d => new
+                    {
+                        id = d.Id,
+                        name = d.NamaDepartement,
+                        fullName = $"{d.NamaDepartement} ({d.Divisi.NamaDivisi})"
+                    })
+                    .OrderBy(d => d.name)
+                    .ToListAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    data = departments
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log error - in production, use proper logging
+                // _logger.LogError(ex, "Error occurred while fetching departments for division: {DivisionId}", divisionId);
+                return Json(new { success = false, message = "An error occurred while fetching departments" });
+            }
+        }
+
+        // 🔥 NEW: API endpoint untuk mendapatkan data employee berdasarkan badge number
+        [HttpGet]
+        public async Task<IActionResult> GetEmployeeByBadge(string badgeNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(badgeNumber))
+                {
+                    return Json(new { success = false, message = "Badge number is required" });
+                }
+
+                var employee = await _context.Employees
+                    .Include(e => e.Departement!)
+                        .ThenInclude(d => d.Divisi)
+                    .Include(e => e.Divisi)
+                    .FirstOrDefaultAsync(e => e.Id == badgeNumber);
+
+                if (employee == null)
+                {
+                    return Json(new { success = false, message = "Employee not found" });
+                }
+
+                return Json(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        name = employee.Name,
+                        email = employee.Email,
+                        position = employee.PositionTitle,
+                        division = employee.Divisi?.NamaDivisi ?? "",
+                        department = employee.Departement?.NamaDepartement ?? "",
+                        divisionId = employee.DivisiId,
+                        departmentId = employee.DepartementId
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log error - in production, use proper logging
+                // _logger.LogError(ex, "Error occurred while fetching employee data for badge: {BadgeNumber}", badgeNumber);
+                return Json(new { success = false, message = "An error occurred while fetching employee data" });
+            }
+        }
+
+        // GET: /Idea/Index - Tampilkan daftar ideas user
+        public async Task<IActionResult> Index(bool success = false)
+        {
+            if (success)
+            {
+                TempData["SuccessMessage"] = "Idea submitted successfully! Validation emails have been sent to reviewers.";
+            }
+
+            try
+            {
+                // 🔥 FIX: Menggunakan BadgeNumber dari user yang login untuk mencari ide
+                var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+                if (string.IsNullOrEmpty(currentUserBadge))
+                {
+                    // Handle jika user tidak memiliki badge number (misalnya, admin)
+                    TempData["ErrorMessage"] = "Could not determine your employee ID.";
+                    return View(new IdeaIndexViewModel());
+                }
+
+                var ideas = await _ideaService.GetUserIdeasAsync(currentUserBadge);
+                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUserBadge);
 
                 var viewModel = new IdeaIndexViewModel
                 {
                     Ideas = ideas,
-                    CurrentUserName = currentUser,
+                    CurrentUserName = User.Identity?.Name ?? "User",
                     TotalIdeas = total,
                     PendingIdeas = pending,
                     ApprovedIdeas = approved
@@ -75,9 +170,12 @@ namespace Ideku.Controllers
                 ViewBag.Divisions = await _context.Divisi.ToListAsync();
                 ViewBag.Categories = await _context.Category.ToListAsync();
                 ViewBag.Events = await _context.Event.ToListAsync();
+
+                // Load Departements dengan Divisi info
                 ViewBag.Departements = await _context.Departement
                     .Include(d => d.Divisi)
-                    .Select(d => new {
+                    .Select(d => new
+                    {
                         Id = d.Id,
                         Name = $"{d.NamaDepartement} ({d.Divisi.NamaDivisi})",
                         DivisiId = d.DivisiId
@@ -107,31 +205,44 @@ namespace Ideku.Controllers
                     ModelState.AddModelError("BadgeNumber", "Employee with this Badge Number not found.");
                 }
 
-                if (model.AttachmentFile != null && model.AttachmentFile.Length > 5 * 1024 * 1024) // 5MB
+                // Validate file sizes
+                if (model.AttachmentFiles != null)
                 {
-                    ModelState.AddModelError("AttachmentFile", "File size must be less than 5MB.");
+                    foreach (var file in model.AttachmentFiles)
+                    {
+                        if (file.Length > 5 * 1024 * 1024) // 5MB
+                        {
+                            ModelState.AddModelError("AttachmentFiles", $"File '{file.FileName}' exceeds the 5MB size limit.");
+                        }
+                    }
                 }
 
                 if (ModelState.IsValid)
                 {
-                    string? attachmentFileName = null;
-                    if (model.AttachmentFile != null)
+                    // Handle file uploads
+                    var attachmentFileNames = new List<string>();
+                    if (model.AttachmentFiles != null)
                     {
-                        attachmentFileName = await _fileService.SaveFileAsync(model.AttachmentFile);
+                        foreach (var file in model.AttachmentFiles)
+                        {
+                            var savedFileName = await _fileService.SaveFileAsync(file);
+                            attachmentFileNames.Add(savedFileName);
+                        }
                     }
 
+                    // Create idea entity
                     var idea = new Idea
                     {
+                        AttachmentFile = attachmentFileNames.Any() ? string.Join(";", attachmentFileNames) : null,
                         InitiatorId = model.BadgeNumber,
-                        Division = model.Division,
-                        Department = model.Department,
+                        Division = model.ToDivision,
+                        Department = model.ToDepartment,
                         CategoryId = model.Category,
                         EventId = model.Event,
                         IdeaName = model.IdeaName,
                         IdeaIssueBackground = model.IdeaIssueBackground,
                         IdeaSolution = model.IdeaSolution,
                         SavingCost = model.SavingCost,
-                        AttachmentFile = attachmentFileName
                     };
 
                     var createdIdea = await _ideaService.CreateIdeaAsync(idea);
@@ -165,30 +276,17 @@ namespace Ideku.Controllers
                         _logger.LogError(emailEx, "Error sending validation emails for idea {IdeaId}", createdIdea.Id);
                     }
 
-                    TempData["SuccessMessage"] = "Idea submitted successfully! Validation emails have been sent to reviewers.";
-                    return RedirectToAction("Index");
+                    return Json(new { success = true, message = "Idea submitted successfully! A notification will be sent to the validator." });
                 }
 
-                // Reload ViewBag data if validation fails
-                ViewBag.Divisions = await _context.Divisi.ToListAsync();
-                ViewBag.Categories = await _context.Category.ToListAsync();
-                ViewBag.Events = await _context.Event.ToListAsync();
-                ViewBag.Departements = await _context.Departement
-                    .Include(d => d.Divisi)
-                    .Select(d => new { 
-                        Id = d.Id, 
-                        Name = $"{d.NamaDepartement} ({d.Divisi.NamaDivisi})", 
-                        DivisiId = d.DivisiId 
-                    })
-                    .ToListAsync();
-                
-                return View(model);
+                // If model state is invalid, return a JSON error
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return Json(new { success = false, message = "Please correct the validation errors.", errors = errors });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating idea");
-                TempData["ErrorMessage"] = "An error occurred while submitting your idea.";
-                return RedirectToAction("Index");
+                return Json(new { success = false, message = "An unexpected error occurred while submitting your idea." });
             }
         }
 
@@ -241,6 +339,7 @@ namespace Ideku.Controllers
                     return RedirectToAction("Index");
                 }
 
+                // Check permissions
                 var currentUser = User.Identity?.Name ?? "";
                 if (idea.InitiatorId != currentUser)
                 {
@@ -248,23 +347,25 @@ namespace Ideku.Controllers
                     return RedirectToAction("Index");
                 }
 
+                // Only allow edit if status is Submitted
                 if (idea.CurrentStatus != "Submitted")
                 {
                     TempData["ErrorMessage"] = "You can only edit ideas that haven't been reviewed yet.";
                     return RedirectToAction("Details", new { id = id });
                 }
 
+                // Convert to ViewModel
                 var viewModel = new IdeaCreateViewModel
                 {
                     BadgeNumber = idea.InitiatorId,
-                    Division = idea.Division,
-                    Department = idea.Department,
-                    Category = idea.CategoryId,
+                    ToDivision = idea.Division,
+                    ToDepartment = idea.Department,
+                    Category = idea.CategoryId.GetValueOrDefault(),
                     Event = idea.EventId,
                     IdeaName = idea.IdeaName,
                     IdeaIssueBackground = idea.IdeaIssueBackground,
                     IdeaSolution = idea.IdeaSolution,
-                    SavingCost = idea.SavingCost
+                    SavingCost = idea.SavingCost.GetValueOrDefault()
                 };
 
                 ViewBag.Divisions = await _context.Divisi.ToListAsync();
@@ -272,13 +373,14 @@ namespace Ideku.Controllers
                 ViewBag.Events = await _context.Event.ToListAsync();
                 ViewBag.Departements = await _context.Departement
                     .Include(d => d.Divisi)
-                    .Select(d => new {
+                    .Select(d => new
+                    {
                         Id = d.Id,
                         Name = $"{d.NamaDepartement} ({d.Divisi.NamaDivisi})",
                         DivisiId = d.DivisiId
                     })
                     .ToListAsync();
-                
+
                 ViewBag.IsEdit = true;
                 ViewBag.IdeaId = id;
                 ViewBag.CurrentAttachment = idea.AttachmentFile;
@@ -322,57 +424,51 @@ namespace Ideku.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    string? attachmentFileName = existingIdea.AttachmentFile;
-                    if (model.AttachmentFile != null)
+                    // Handle file uploads
+                    var attachmentFileNames = new List<string>();
+                    if (model.AttachmentFiles != null && model.AttachmentFiles.Any())
                     {
+                        // Delete all old files
                         if (!string.IsNullOrEmpty(existingIdea.AttachmentFile))
                         {
-                            _fileService.DeleteFile(existingIdea.AttachmentFile);
+                            foreach (var oldFile in existingIdea.AttachmentFile.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                _fileService.DeleteFile(oldFile);
+                            }
                         }
-                        attachmentFileName = await _fileService.SaveFileAsync(model.AttachmentFile);
+
+                        // Save new files
+                        foreach (var file in model.AttachmentFiles)
+                        {
+                            var savedFileName = await _fileService.SaveFileAsync(file);
+                            attachmentFileNames.Add(savedFileName);
+                        }
+                        existingIdea.AttachmentFile = string.Join(";", attachmentFileNames);
                     }
 
+                    // Update idea
                     existingIdea.InitiatorId = model.BadgeNumber;
-                    existingIdea.Division = model.Division;
-                    existingIdea.Department = model.Department;
+                    existingIdea.Division = model.ToDivision;
+                    existingIdea.Department = model.ToDepartment;
                     existingIdea.CategoryId = model.Category;
                     existingIdea.EventId = model.Event;
                     existingIdea.IdeaName = model.IdeaName;
                     existingIdea.IdeaIssueBackground = model.IdeaIssueBackground;
                     existingIdea.IdeaSolution = model.IdeaSolution;
                     existingIdea.SavingCost = model.SavingCost;
-                    existingIdea.AttachmentFile = attachmentFileName;
 
                     await _ideaService.UpdateIdeaAsync(existingIdea);
 
-                    TempData["SuccessMessage"] = "Idea updated successfully!";
-                    return RedirectToAction("Details", new { id = id });
+                    return Json(new { success = true, message = "Idea updated successfully!", redirectUrl = Url.Action("Index", "Idea") });
                 }
 
-                // Reload ViewBag data if validation fails
-                ViewBag.Divisions = await _context.Divisi.ToListAsync();
-                ViewBag.Categories = await _context.Category.ToListAsync();
-                ViewBag.Events = await _context.Event.ToListAsync();
-                ViewBag.Departements = await _context.Departement
-                    .Include(d => d.Divisi)
-                    .Select(d => new {
-                        Id = d.Id,
-                        Name = $"{d.NamaDepartement} ({d.Divisi.NamaDivisi})",
-                        DivisiId = d.DivisiId
-                    })
-                    .ToListAsync();
-                
-                ViewBag.IsEdit = true;
-                ViewBag.IdeaId = id;
-                ViewBag.CurrentAttachment = existingIdea.AttachmentFile;
-                
-                return View("Create", model);
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return Json(new { success = false, message = "Please correct the validation errors.", errors = errors });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating idea {IdeaId}", id);
-                TempData["ErrorMessage"] = "An error occurred while updating your idea.";
-                return RedirectToAction("Index");
+                return Json(new { success = false, message = "An unexpected error occurred while updating your idea." });
             }
         }
 
@@ -390,6 +486,7 @@ namespace Ideku.Controllers
                     return RedirectToAction("Index");
                 }
 
+                // Check permissions
                 var currentUser = User.Identity?.Name ?? "";
                 if (idea.InitiatorId != currentUser)
                 {
@@ -397,12 +494,14 @@ namespace Ideku.Controllers
                     return RedirectToAction("Index");
                 }
 
+                // Only allow delete if status is Submitted
                 if (idea.CurrentStatus != "Submitted")
                 {
                     TempData["ErrorMessage"] = "You can only delete ideas that haven't been reviewed yet.";
                     return RedirectToAction("Index");
                 }
 
+                // Delete attached file if exists
                 if (!string.IsNullOrEmpty(idea.AttachmentFile))
                 {
                     _fileService.DeleteFile(idea.AttachmentFile);
@@ -432,6 +531,7 @@ namespace Ideku.Controllers
                     return NotFound();
                 }
 
+                // Verify user has access to this idea
                 var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
                 if (idea == null || idea.AttachmentFile != filename)
                 {
@@ -459,7 +559,7 @@ namespace Ideku.Controllers
 
                 var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
                 var originalFileName = filename.Length > 37 ? filename.Substring(37) : filename;
-                
+
                 return File(fileBytes, "application/octet-stream", originalFileName);
             }
             catch (Exception ex)
@@ -476,17 +576,34 @@ namespace Ideku.Controllers
         {
             try
             {
-                var currentUser = User.Identity?.Name ?? "";
-                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUser);
-                return Json(new { success = true, total, pending, approved });
+                // 🔥 FIX: Menggunakan BadgeNumber dari user yang login untuk statistik
+                var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+                if (string.IsNullOrEmpty(currentUserBadge))
+                {
+                    return Json(new { success = false, message = "Could not determine your employee ID." });
+                }
+
+                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUserBadge);
+
+                return Json(new
+                {
+                    success = true,
+                    total,
+                    pending,
+                    approved
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching user stats for {Username}", User.Identity?.Name);
-                return Json(new { success = false, message = "Unable to load statistics" });
+                // Log error in production: _logger.LogError(ex, "Error getting user stats for: {Username}", User.Identity?.Name);
+                return Json(new
+                {
+                    success = false,
+                    message = "Unable to load statistics"
+                });
             }
         }
-
+        
         // API: /Idea/ResendValidationEmails
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -503,7 +620,9 @@ namespace Ideku.Controllers
                 var currentUserBadge = User.Identity?.Name ?? "";
                 var user = await _authService.AuthenticateAsync(currentUserBadge); // Authenticate to get User object with Role
 
-                if (user?.Role == null || (user.Role.RoleName != "Manager" && user.Role.RoleName != "SuperAdmin"))
+                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+
+                if (user?.Role == null || !allowedRoles.Contains(user.Role.Id))
                 {
                     return Json(new { success = false, message = "You don't have permission to resend validation emails." });
                 }

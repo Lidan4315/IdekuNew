@@ -52,7 +52,7 @@ namespace Ideku.Data.Context
                 .HasForeignKey(u => u.EmployeeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // User -> Role (RESTRICT)
+            // 🔥 UPDATED: User -> Role (RESTRICT) with string foreign key
             modelBuilder.Entity<User>()
                 .HasOne(u => u.Role)
                 .WithMany()
