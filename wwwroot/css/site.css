@@ -27,6 +27,7 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
 }
 
 .sidebar-header {
@@ -116,6 +117,7 @@ body {
     padding: 2rem;
     background: #f8f9fa;
     min-height: 100vh;
+    overflow-x: hidden; /* Prevents the main content from scrolling horizontally */
 }
 
 /* Page Header */
@@ -156,7 +158,7 @@ body {
 .stat-card {
     padding: 2rem;
     border-radius: 12px;
-    color: white;
+    color: rgb(255, 255, 255);
     display: flex;
     align-items: center;
     margin-bottom: 1.5rem;
@@ -339,10 +341,11 @@ body {
 
 .table th {
     font-weight: 600;
-    background: #f8f9fa;
+    background: #ffffff;
     border-top: none;
     color: #2c3e50;
     padding: 1rem 0.75rem;
+    white-space: nowrap;
 }
 
 .table td {
@@ -497,6 +500,428 @@ body {
         margin-right: 0;
         margin-bottom: 1rem;
     }
+
+    /* Additional CSS for Validation Pages - Add to site.css */
+
+/* Validation specific styles */
+.validation-section {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #f8f9fa;
+}
+
+.validation-section h6 {
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.validation-section.approve {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.validation-section.reject {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+.validation-section.info {
+    border-color: #ffc107;
+    background-color: #fffef8;
+}
+
+/* Timeline styles for idea details */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -23px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+.timeline-item:not(.active) .timeline-marker {
+    background-color: #dee2e6;
+}
+
+.timeline-item:not(.active) .timeline-content {
+    opacity: 0.6;
+}
+
+.timeline-content h6 {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.timeline-content p {
+    margin-bottom: 0;
+    font-size: 12px;
+}
+
+/* Submitter info styles */
+.avatar-placeholder {
+    color: #6c757d;
+}
+
+/* Stats card improvements */
+.stat-card {
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary-dark));
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-card.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+}
+
+.stat-card.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #007bff);
+}
+
+.stat-card.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.stat-card.bg-primary {
+    background: linear-gradient(135deg, #007bff, #6610f2);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-right: 20px;
+    opacity: 0.8;
+}
+
+.stat-content h3 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.stat-content p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* Small stat cards for validation list */
+.small-stat-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.small-stat-card .stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.small-stat-card .stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* Navigation divider */
+.nav-divider {
+    margin: 15px 0 10px 0;
+    padding: 0 20px;
+}
+
+.nav-divider span {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* Idea title in tables */
+.idea-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 2px;
+}
+
+.submitter-info strong {
+    color: #495057;
+}
+
+/* Form section styling */
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.section-title {
+    color: #495057;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+/* Required field indicator */
+.form-label.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Empty state styling */
+.empty-state {
+    color: #6c757d;
+}
+
+.empty-state i {
+    opacity: 0.5;
+}
+
+/* Alert improvements */
+.alert {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Button improvements */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Card improvements */
+.card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border-radius: 10px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+
+/* Table improvements */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+    border-color: #f1f3f4;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Badge improvements */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* Modal improvements */
+.modal-content {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 10px 10px;
+}
+
+/* Input improvements */
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #1b6ec2;
+    box-shadow: 0 0 0 0.2rem rgba(27, 110, 194, 0.25);
+}
+
+/* Sidebar improvements */
+.sidebar .nav-links a {
+    transition: all 0.3s ease;
+}
+
+.sidebar .nav-links a:hover {
+    background-color: rgba(255,255,255,0.1);
+    transform: translateX(5px);
+}
+
+.sidebar .nav-links a.active {
+    background-color: rgba(255,255,255,0.2);
+    border-right: 3px solid #fff;
+}
+
+/* Page header improvements */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.page-header p {
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .timeline {
+        padding-left: 20px;
+    }
+    
+    .timeline::before {
+        left: 10px;
+    }
+    
+    .timeline-marker {
+        left: -18px;
+    }
+}
+
+/* Animation for alerts */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.alert.show {
+    animation: slideInDown 0.3s ease;
+}
+
+/* Loading states */
+.btn.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .card {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .card-header {
+        background-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .table {
+        color: #e2e8f0;
+    }
+    
+    .table th {
+        color: #cbd5e0;
+    }
+    
+    .form-control, .form-select {
+        background-color: #4a5568;
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+}
 }
 
 /* Utilities */

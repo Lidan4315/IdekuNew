@@ -12,6 +12,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// 🔥 NEW: Configure Email Settings
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+
 // Add Repository services
 builder.Services.AddScoped<IdeaRepository>();
 builder.Services.AddScoped<UserRepository>();
@@ -20,6 +23,9 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<FileService>();
+
+// 🔥 NEW: Add Email Service
+builder.Services.AddScoped<EmailService>();
 
 // Add Authentication
 builder.Services.AddAuthentication("MyCookieAuth").AddCookie("MyCookieAuth", options =>
@@ -69,7 +75,7 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// Database seeding method
+// Database seeding method (existing code remains the same)
 static void SeedDatabase(IServiceProvider services)
 {
     using var context = services.GetRequiredService<AppDbContext>();
@@ -226,7 +232,7 @@ static void SeedDatabase(IServiceProvider services)
         new Ideku.Models.Entities.User
         {
             EmployeeId = "EMP002",
-            RoleId = 3, // Manager role
+            RoleId = 3, // Manager role (can validate)
             Username = "jane.smith",
             Name = "Jane Smith",
             FlagActing = false

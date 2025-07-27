@@ -1,0 +1,55 @@
+# C# Project specific
+*.cs.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio 2015 cache/options directory
+.vs/
+
+# Visual Studio 2017 cache/options directory
+.vs/
+
+# Rider - https://www.jetbrains.com/help/rider/Sharing_Configuration_Options.html
+.idea/
+*.sln.iml
+
+# User-specific files
+*.DotSettings.user
+
+# App settings
+appsettings.Development.json
+
+# Uploads
+wwwroot/uploads/
+
+# Secrets
+secrets.json
+
+# EF Core migrations
+# /Migrations/
+
+# Nuget packages
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+*/[Pp]ackages/
+# except build/, which is used as an MSBuild target.
+!/[Pp]ackages/build/
+# Uncomment if necessary however generally it will be regenerated when needed
+#!/[Pp]ackages/repositories.config
+
+# Windows thumbnail cache files
+Thumbs.db

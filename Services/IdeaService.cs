@@ -31,7 +31,7 @@ namespace Ideku.Services
         {
             // Set default values
             idea.SubmittedDate = DateTime.UtcNow;
-            idea.CurrentStage = 1;
+            idea.CurrentStage = 0; // Set initial stage to S0
             idea.CurrentStatus = "Submitted";
 
             return await _ideaRepository.CreateAsync(idea);

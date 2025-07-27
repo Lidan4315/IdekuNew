@@ -1,0 +1,339 @@
+@model Ideku.Models.ViewModels.Validation.ValidationReviewViewModel
+
+@{
+    ViewData["Title"] = "Validate Idea";
+}
+
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-0">Validate Idea</h1>
+            <p class="text-muted">Review and provide validation decision for submitted idea</p>
+        </div>
+        <div>
+            <a asp-action="List" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Validation List
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Idea Details Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>@Model.IdeaName</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Idea ID:</strong>
+                        <span class="badge bg-light text-dark">#@Model.IdeaId</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Current Status:</strong>
+                        <span class="badge bg-warning">@Model.CurrentStatus</span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Submitted by:</strong>
+                        <span>@Model.SubmitterName (@Model.SubmitterId)</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Submitted Date:</strong>
+                        <span>@Model.SubmittedDate.ToString("MMMM dd, yyyy HH:mm")</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                        @if (!string.IsNullOrEmpty(Model.Division))
+                        {
+                            <div class="col-md-6">
+                                <strong>Division:</strong>
+                                <span>@Model.Division</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Department))
+                        {
+                            <div class="col-md-6">
+                                <strong>Department:</strong>
+                                <span>@Model.Department</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.CategoryName) || !string.IsNullOrEmpty(Model.EventName))
+                {
+                    <div class="row mb-3">
+                        @if (!string.IsNullOrEmpty(Model.CategoryName))
+                        {
+                            <div class="col-md-6">
+                                <strong>Category:</strong>
+                                <span class="badge bg-info">@Model.CategoryName</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.EventName))
+                        {
+                            <div class="col-md-6">
+                                <strong>Event:</strong>
+                                <span class="badge bg-secondary">@Model.EventName</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.IdeaIssueBackground))
+                {
+                    <div class="mb-4">
+                        <h6><i class="bi bi-exclamation-triangle me-2"></i>Problem/Issue Background</h6>
+                        <p class="text-muted">@Model.IdeaIssueBackground</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.IdeaSolution))
+                {
+                    <div class="mb-4">
+                        <h6><i class="bi bi-gear me-2"></i>Proposed Solution</h6>
+                        <p class="text-muted">@Model.IdeaSolution</p>
+                    </div>
+                }
+
+                @if (Model.SavingCost.HasValue)
+                {
+                    <div class="mb-4">
+                        <h6><i class="bi bi-currency-dollar me-2"></i>Financial Impact</h6>
+                        <p class="fw-bold text-success fs-5">@Model.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</p>
+                        <small class="text-muted">Estimated cost savings (as claimed by submitter)</small>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.AttachmentFile))
+                {
+                    <div class="mb-4">
+                        <h6><i class="bi bi-paperclip me-2"></i>Attachment</h6>
+                        <a asp-controller="Idea" asp-action="Download" asp-route-filename="@Model.AttachmentFile" asp-route-ideaId="@Model.IdeaId" 
+                           target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-download me-2"></i>Download Attachment
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Validation Actions Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-check-square me-2"></i>Validation Decision</h5>
+            </div>
+            <div class="card-body">
+                <!-- Approve Section -->
+                <div class="validation-section mb-4">
+                    <h6 class="text-success"><i class="bi bi-check-circle me-2"></i>Approve Idea</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="validatedSavingCost" class="form-label">Validated Saving Cost (USD)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="validatedSavingCost" step="0.01" placeholder="Enter validated amount">
+                                </div>
+                                <small class="form-text text-muted">Optional: Enter the validated cost savings amount</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="approvalComments" class="form-label">Approval Comments</label>
+                                <textarea class="form-control" id="approvalComments" rows="3" placeholder="Optional comments about the approval"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="approveIdea()">
+                        <i class="bi bi-check-circle me-2"></i>Approve Idea
+                    </button>
+                </div>
+
+                <hr>
+
+                <!-- Reject Section -->
+                <div class="validation-section mb-4">
+                    <h6 class="text-danger"><i class="bi bi-x-circle me-2"></i>Reject Idea</h6>
+                    <div class="mb-3">
+                        <label for="rejectionReason" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectionReason" rows="3" placeholder="Please provide a clear reason for rejection"></textarea>
+                        <small class="form-text text-muted">This reason will be sent to the submitter</small>
+                    </div>
+                    <button type="button" class="btn btn-danger" onclick="rejectIdea()">
+                        <i class="bi bi-x-circle me-2"></i>Reject Idea
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Submitter Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-person me-2"></i>Submitter Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="avatar-placeholder me-3">
+                        <i class="bi bi-person-circle fs-2"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0">@Model.SubmitterName</h6>
+                        <small class="text-muted">@Model.SubmitterId</small>
+                        @if (!string.IsNullOrEmpty(Model.SubmitterEmail))
+                        {
+                            <br><small class="text-muted">@Model.SubmitterEmail</small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation Guidelines -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Validation Guidelines</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Evaluate feasibility and potential impact
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Consider implementation costs vs. benefits
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Check alignment with company objectives
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Provide constructive feedback
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function approveIdea() {
+            const comments = document.getElementById('approvalComments').value;
+            const validatedCost = document.getElementById('validatedSavingCost').value;
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you really want to approve this idea?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, approve it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('@Url.Action("Approve", "Validation")/' + @Model.IdeaId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: new URLSearchParams({
+                            'comments': comments,
+                            'validatedSavingCost': validatedCost
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showAlert('success', data.message);
+                        } else {
+                            showAlert('danger', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        showAlert('danger', 'An error occurred while processing your request.');
+                    });
+                }
+            });
+        }
+
+        function rejectIdea() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!reason) {
+                showAlert('warning', 'Please provide a rejection reason.');
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you really want to reject this idea? This action cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, reject it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('@Url.Action("Reject", "Validation")/' + @Model.IdeaId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: new URLSearchParams({
+                            'rejectReason': reason
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showAlert('success', data.message);
+                        } else {
+                            showAlert('danger', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        showAlert('danger', 'An error occurred while processing your request.');
+                    });
+                }
+            });
+        }
+
+
+        function showAlert(type, message) {
+            if (type === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: message,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = '@Url.Action("List", "Validation")';
+                });
+            } else {
+                Swal.fire({
+                    icon: type, // 'warning' or 'danger'
+                    title: 'Oops...',
+                    text: message
+                });
+            }
+        }
+    </script>
+    
+    @Html.AntiForgeryToken()
+}

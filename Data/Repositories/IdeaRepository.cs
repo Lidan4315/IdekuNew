@@ -25,7 +25,7 @@ namespace Ideku.Data.Repositories
         public async Task<List<Idea>> GetByInitiatorAsync(string initiator)
         {
             return await _context.Ideas
-                .Where(i => i.Initiator == initiator)
+                .Where(i => i.InitiatorId == initiator)
                 .Include(i => i.Category)
                 .Include(i => i.Event)
                 .OrderByDescending(i => i.SubmittedDate)

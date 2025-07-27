@@ -11,9 +11,10 @@ namespace Ideku.Models.Entities
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(150)]
-        [Column("cInitiator")]
-        public string Initiator { get; set; } = string.Empty;
+        [Column("cInitiator", TypeName = "varchar(10)")]
+        public string InitiatorId { get; set; } = string.Empty;
+        [ForeignKey("InitiatorId")]
+        public Employee? Initiator { get; set; }
 
         [MaxLength(100)]
         [Column("cDivision")]

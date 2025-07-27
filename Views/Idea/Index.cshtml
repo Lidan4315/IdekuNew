@@ -68,11 +68,7 @@
                             <tr>
                                 <td><span class="badge bg-light text-dark">#@idea.Id</span></td>
                                 <td>
-                                    <div class="idea-title">@idea.IdeaName</div>
-                                    @if (!string.IsNullOrEmpty(idea.IdeaIssueBackground))
-                                    {
-                                        <small class="text-muted">@idea.IdeaIssueBackground.Substring(0, Math.Min(50, idea.IdeaIssueBackground.Length))...</small>
-                                    }
+                                    @idea.IdeaName
                                 </td>
                                 <td>
                                     @if (idea.Category != null)
