@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ideku.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250723040010_AddEmployeeForeignKeysFixed")]
-    partial class AddEmployeeForeignKeysFixed
+    [Migration("20250724073931_InitialMigrate")]
+    partial class InitialMigrate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -281,24 +281,26 @@ namespace Ideku.Migrations
 
             modelBuilder.Entity("Ideku.Models.Entities.Role", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("Id")
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Description")
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("description");
 
                     b.Property<string>("RoleName")
                         .IsRequired()
-                        .HasColumnType("varchar(20)");
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("role_name");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
@@ -330,8 +332,9 @@ namespace Ideku.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(150)");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int")
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
                         .HasColumnName("role_id");
 
                     b.Property<DateTime?>("UpdatedAt")

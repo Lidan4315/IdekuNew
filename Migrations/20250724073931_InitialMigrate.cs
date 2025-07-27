@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Ideku.Migrations
 {
     /// <inheritdoc />
-    public partial class AddEmployeeForeignKeysFixed : Migration
+    public partial class InitialMigrate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -53,16 +53,15 @@ namespace Ideku.Migrations
                 name: "roles",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RoleName = table.Column<string>(type: "varchar(20)", nullable: false),
-                    Description = table.Column<string>(type: "varchar(50)", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    id = table.Column<string>(type: "varchar(10)", nullable: false),
+                    role_name = table.Column<string>(type: "varchar(50)", nullable: false),
+                    description = table.Column<string>(type: "varchar(100)", nullable: true),
+                    created_at = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_roles", x => x.Id);
+                    table.PrimaryKey("PK_roles", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -170,7 +169,7 @@ namespace Ideku.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     employee_id = table.Column<string>(type: "varchar(10)", nullable: false),
-                    role_id = table.Column<int>(type: "int", nullable: false),
+                    role_id = table.Column<string>(type: "varchar(10)", nullable: false),
                     Username = table.Column<string>(type: "varchar(50)", nullable: false),
                     Name = table.Column<string>(type: "varchar(150)", nullable: false),
                     FlagActing = table.Column<string>(type: "varchar(50)", nullable: false),
@@ -190,7 +189,7 @@ namespace Ideku.Migrations
                         name: "FK_users_roles_role_id",
                         column: x => x.role_id,
                         principalTable: "roles",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
 

@@ -21,34 +21,77 @@
                     <!-- Employee Info Section -->
                     <div class="form-section">
                         <h5 class="section-title">
-                            <i class="bi bi-person me-2"></i>Employee Information
+                            <i class="bi bi-person me-2"></i>Initiator Profile
                         </h5>
                         
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label asp-for="BadgeNumber" class="form-label required"></label>
-                                    <input asp-for="BadgeNumber" class="form-control" placeholder="Enter your badge number" />
-                                    <span asp-validation-for="BadgeNumber" class="text-danger"></span>
+                        <!-- Badge Number Input -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label asp-for="BadgeNumber" class="form-label required"></label>
+                                <input asp-for="BadgeNumber" class="form-control" placeholder="Enter badge number" 
+                                       autocomplete="off" />
+                                <span asp-validation-for="BadgeNumber" class="text-danger"></span>
+                                <div id="badge-loading" class="text-muted small mt-1" style="display: none;">
+                                    <i class="bi bi-hourglass-split me-1"></i>Loading employee data...
+                                </div>
+                                <div id="badge-error" class="text-danger small mt-1" style="display: none;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Employee Profile Display (Auto-filled) -->
+                        <div id="employee-profile" style="display: none;">
+                            <div class="bg-light p-3 rounded mb-3">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Name</label>
+                                        <input asp-for="EmployeeName" id="employee-name" class="form-control" readonly />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Division</label>
+                                        <input asp-for="EmployeeDivision" id="employee-division" class="form-control" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Department</label>
+                                        <input asp-for="EmployeeDepartment" id="employee-department" class="form-control" readonly />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Position</label>
+                                        <input asp-for="EmployeePosition" id="employee-position" class="form-control" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label">Email</label>
+                                        <input asp-for="EmployeeEmail" id="employee-email" class="form-control" readonly />
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="col-md-4">
+                        </div>
+
+                        <!-- To Division and To Department -->
+                        <div class="row">
+                            <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="Division" class="form-label"></label>
-                                    <select asp-for="Division" class="form-select" asp-items="@(new SelectList(ViewBag.Divisions, "Id", "NamaDivisi"))">
-                                        <option value="">-- Select Division --</option>
+                                    <label asp-for="ToDivision" class="form-label required"></label>
+                                    <select asp-for="ToDivision" id="divisionSelect" class="form-select" asp-items="@(new SelectList(ViewBag.Divisions, "Id", "NamaDivisi"))">
+                                        <option value="">-- Select To Division --</option>
                                     </select>
+                                    <small class="form-text text-muted">Which division is this idea intended for?</small>
                                 </div>
                             </div>
 
-                            <!-- 🔥 NEW: Department dropdown -->
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="Department" class="form-label"></label>
-                                    <select asp-for="Department" class="form-select" asp-items="@(new SelectList(ViewBag.Departements, "Id", "Name"))">
-                                        <option value="">-- Select Department --</option>
+                                    <label asp-for="ToDepartment" class="form-label required"></label>
+                                    <select asp-for="ToDepartment" id="departmentSelect" class="form-select">
+                                        <option value="">-- Select To Division First --</option>
                                     </select>
+                                    <small class="form-text text-muted">Which department is this idea intended for?</small>
+                                    <div id="department-loading" class="text-muted small mt-1" style="display: none;">
+                                        <i class="bi bi-hourglass-split me-1"></i>Loading departments...
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -63,7 +106,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="Category" class="form-label"></label>
+                                    <label asp-for="Category" class="form-label required"></label>
                                     <select asp-for="Category" class="form-select" asp-items="@(new SelectList(ViewBag.Categories, "Id", "NamaCategory"))">
                                         <option value="">-- Select Category --</option>
                                     </select>
@@ -74,8 +117,9 @@
                                 <div class="mb-3">
                                     <label asp-for="Event" class="form-label"></label>
                                     <select asp-for="Event" class="form-select" asp-items="@(new SelectList(ViewBag.Events, "Id", "NamaEvent"))">
-                                        <option value="">-- Select Event --</option>
+                                        <option value="">-- Select Event (Optional) --</option>
                                     </select>
+                                    <small class="form-text text-muted">Event selection is optional</small>
                                 </div>
                             </div>
                         </div>
@@ -89,21 +133,25 @@
                         
                         <div class="mb-3">
                             <label asp-for="IdeaName" class="form-label required"></label>
-                            <input asp-for="IdeaName" class="form-control" placeholder="Give your idea a catchy title" />
+                            <input asp-for="IdeaName" class="form-control" placeholder="Give your idea a catchy title" 
+                                   maxlength="150" />
                             <span asp-validation-for="IdeaName" class="text-danger"></span>
+                            <small class="form-text text-muted">Enter a descriptive title for your idea</small>
                         </div>
                         
                         <div class="mb-3">
-                            <label asp-for="IdeaIssueBackground" class="form-label"></label>
+                            <label asp-for="IdeaIssueBackground" class="form-label required"></label>
                             <textarea asp-for="IdeaIssueBackground" class="form-control" rows="4" 
-                                    placeholder="Describe the problem or issue this idea addresses"></textarea>
+                                    placeholder="Describe the problem or issue this idea addresses" 
+                                    maxlength="2000"></textarea>
                             <small class="form-text text-muted">What problem does your idea solve?</small>
                         </div>
                         
                         <div class="mb-3">
-                            <label asp-for="IdeaSolution" class="form-label"></label>
+                            <label asp-for="IdeaSolution" class="form-label required"></label>
                             <textarea asp-for="IdeaSolution" class="form-control" rows="4" 
-                                    placeholder="Explain your proposed solution"></textarea>
+                                    placeholder="Explain your proposed solution" 
+                                    maxlength="2000"></textarea>
                             <small class="form-text text-muted">How would you implement this idea?</small>
                         </div>
                     </div>
@@ -117,34 +165,39 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="SavingCost" class="form-label"></label>
+                                    <label asp-for="SavingCost" class="form-label required"></label>
                                     <div class="input-group">
                                         <span class="input-group-text">USD</span>
                                         <input asp-for="SavingCost" class="form-control" type="number" step="0.01" 
-                                               placeholder="0.00" />
+                                               placeholder="0.00" min="0.01" />
                                     </div>
-                                    <small class="form-text text-muted">Estimated cost savings (optional)</small>
+                                    <small class="form-text text-muted">Estimated cost savings</small>
                                 </div>
                             </div>
                             
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="AttachmentFile" class="form-label"></label>
+                                    <label asp-for="AttachmentFiles" class="form-label"></label>
                                     @if (isEdit && !string.IsNullOrEmpty(currentAttachment))
                                     {
-                                        <div class="current-file mb-2">
-                                            <small class="text-muted">
-                                                Current file: 
-                                                <a href="@Url.Action("Download", new { filename = currentAttachment, ideaId = ideaId })" target="_blank">
-                                                    @currentAttachment.Substring(37)
-                                                </a>
-                                            </small>
+                                        <div class="current-files mb-2">
+                                            <small class="text-muted d-block">Current files:</small>
+                                            <ul class="list-unstyled ps-3">
+                                                @foreach (var file in currentAttachment.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                                                {
+                                                    <li>
+                                                        <a href="@Url.Action("Download", new { filename = file, ideaId = ideaId })" target="_blank">
+                                                            @file.Substring(37)
+                                                        </a>
+                                                    </li>
+                                                }
+                                            </ul>
                                         </div>
                                     }
-                                    <input asp-for="AttachmentFile" class="form-control" type="file" 
+                                    <input asp-for="AttachmentFiles" class="form-control" type="file" multiple
                                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" />
                                     <small class="form-text text-muted">
-                                        @(isEdit ? "Upload new file to replace current attachment (optional)" : "Upload supporting documents (optional)")
+                                        @(isEdit ? "Upload new files to replace current ones (optional)" : "Upload supporting documents (optional, multiple allowed)")
                                     </small>
                                 </div>
                             </div>
@@ -156,7 +209,7 @@
                         <a asp-action="Index" class="btn btn-secondary">
                             <i class="bi bi-x-circle me-2"></i>Cancel
                         </a>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
                             <i class="bi bi-check-circle me-2"></i>@(isEdit ? "Update Idea" : "Submit Idea")
                         </button>
                     </div>
@@ -175,6 +228,14 @@
                 <ul class="list-unstyled">
                     <li class="mb-2">
                         <i class="bi bi-check text-success me-2"></i>
+                        Enter badge number to auto-fill your profile
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
+                        Select division first to see relevant departments
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check text-success me-2"></i>
                         Be specific about the problem you're solving
                     </li>
                     <li class="mb-2">
@@ -185,10 +246,6 @@
                         <i class="bi bi-check text-success me-2"></i>
                         Include supporting documents if possible
                     </li>
-                    <li class="mb-2">
-                        <i class="bi bi-check text-success me-2"></i>
-                        Think about implementation feasibility
-                    </li>
                 </ul>
             </div>
         </div>
@@ -196,5 +253,172 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // --- EXISTING LOGIC FOR BADGE LOOKUP AND DEPARTMENT DROPDOWN ---
+            let badgeTimeout;
+            $('#BadgeNumber').on('input', function() {
+                clearTimeout(badgeTimeout);
+                const badgeNumber = $(this).val().trim();
+                if (badgeNumber.length >= 3) {
+                    badgeTimeout = setTimeout(() => fetchEmployeeData(badgeNumber), 500);
+                } else {
+                    $('#employee-profile').slideUp();
+                }
+            });
+
+            $('#divisionSelect').change(function() {
+                const selectedDivision = $(this).val();
+                const departmentSelect = $('#departmentSelect');
+                departmentSelect.val('');
+                if (selectedDivision) {
+                    $('#department-loading').show();
+                    departmentSelect.prop('disabled', true);
+                    $.ajax({
+                        url: '@Url.Action("GetDepartmentsByDivision")',
+                        data: { divisionId: selectedDivision },
+                        success: function(response) {
+                            departmentSelect.prop('disabled', false);
+                            $('#department-loading').hide();
+                            if (response.success) {
+                                departmentSelect.html('<option value="">-- Select To Department --</option>');
+                                $.each(response.data, (index, dept) => {
+                                    departmentSelect.append($('<option></option>').val(dept.id).text(dept.name));
+                                });
+                                @if (isEdit && !string.IsNullOrEmpty(Model.ToDepartment)) {
+                                    <text>departmentSelect.val('@Model.ToDepartment');</text>
+                                }
+                            } else {
+                                departmentSelect.html('<option value="">-- No departments found --</option>');
+                            }
+                        },
+                        error: () => {
+                            $('#department-loading').hide();
+                            departmentSelect.prop('disabled', false);
+                            departmentSelect.html('<option value="">-- Error loading --</option>');
+                        }
+                    });
+                } else {
+                    departmentSelect.html('<option value="">-- Select To Division First --</option>');
+                    departmentSelect.prop('disabled', false);
+                }
+            });
+
+            function fetchEmployeeData(badgeNumber) {
+                $('#badge-loading').show();
+                $.ajax({
+                    url: '@Url.Action("GetEmployeeByBadge")',
+                    data: { badgeNumber: badgeNumber },
+                    success: function(response) {
+                        $('#badge-loading').hide();
+                        if (response.success) {
+                            $('#employee-name').val(response.data.name);
+                            $('#employee-email').val(response.data.email);
+                            $('#employee-position').val(response.data.position);
+                            $('#employee-division').val(response.data.division);
+                            $('#employee-department').val(response.data.department);
+                            $('#employee-profile').slideDown();
+                            $('#badge-error').hide();
+                        } else {
+                            $('#badge-error').text(response.message || 'Employee not found').show();
+                            $('#employee-profile').slideUp();
+                        }
+                    },
+                    error: () => {
+                        $('#badge-loading').hide();
+                        $('#badge-error').text('Error fetching employee data.').show();
+                        $('#employee-profile').slideUp();
+                    }
+                });
+            }
+
+            // Initialize for edit mode
+            @if (isEdit && !string.IsNullOrEmpty(Model.ToDivision)) {
+                <text>
+                setTimeout(() => $('#divisionSelect').val('@Model.ToDivision').trigger('change'), 100);
+                </text>
+            }
+            @if (isEdit && !string.IsNullOrEmpty(Model.BadgeNumber)) {
+                <text>
+                setTimeout(() => fetchEmployeeData('@Model.BadgeNumber'), 100);
+                </text>
+            }
+
+            // --- NEW AJAX SUBMISSION LOGIC ---
+            $('form').on('submit', function(e) {
+                e.preventDefault(); // Prevent the default form submission
+
+                const form = $(this);
+                const submitBtn = $('#submit-btn');
+                const originalBtnText = submitBtn.html();
+
+                // Use unobtrusive validation to check form validity
+                if (!form.valid()) {
+                    showAlert('warning', 'Please fill in all required fields correctly.');
+                    return;
+                }
+
+                submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...').prop('disabled', true);
+
+                const formData = new FormData(this);
+
+                fetch(form.attr('action'), {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        // The 'RequestVerificationToken' is included in FormData automatically by the form helper
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // Try to parse error response as JSON, but fallback to text
+                        return response.json().catch(() => response.text()).then(errorBody => {
+                            throw new Error(`Server responded with ${response.status}. Body: ${JSON.stringify(errorBody)}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', data.message, data.redirectUrl);
+                    } else {
+                        // Join array of errors if it exists
+                        const errorMessage = data.errors ? data.message + '<br><br>' + data.errors.join('<br>') : data.message;
+                        showAlert('error', errorMessage);
+                        submitBtn.html(originalBtnText).prop('disabled', false);
+                    }
+                })
+                .catch(error => {
+                    console.error("Fetch Error:", error);
+                    showAlert('error', 'A network or script error occurred. Please check the console and try again.');
+                    submitBtn.html(originalBtnText).prop('disabled', false);
+                });
+            });
+
+            function showAlert(type, message, redirectUrl = null) {
+                if (type === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        html: message, // Use html to render <br> tags if any
+                        timer: 2500,
+                        showConfirmButton: false,
+                        allowOutsideClick: false
+                    }).then(() => {
+                        // Redirect if a URL is provided, otherwise default to the Index page
+                        window.location.href = redirectUrl || '@Url.Action("Index", "Idea")';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: type, // 'warning' or 'error'
+                        title: 'Submission Failed',
+                        html: message
+                    });
+                }
+            }
+        });
+    </script>
 }

@@ -31,7 +31,7 @@ namespace Ideku.Services
         {
             // Set default values
             idea.SubmittedDate = DateTime.UtcNow;
-            idea.CurrentStage = 0; // Set initial stage to S0
+            idea.CurrentStage = 0; // 🔥 FIX: Mengubah stage awal menjadi 0
             idea.CurrentStatus = "Submitted";
 
             return await _ideaRepository.CreateAsync(idea);
@@ -54,6 +54,17 @@ namespace Ideku.Services
             var total = ideas.Count;
             var pending = ideas.Count(i => i.CurrentStatus == "Submitted" || i.CurrentStatus == "Under Review");
             var approved = ideas.Count(i => i.CurrentStatus == "Approved");
+
+            return (total, pending, approved);
+        }
+
+        // 🔥 NEW: Method untuk mendapatkan statistik semua ide
+        public async Task<(int total, int pending, int approved)> GetGlobalIdeaStatsAsync()
+        {
+            var allIdeas = await GetAllIdeasAsync();
+            var total = allIdeas.Count;
+            var pending = allIdeas.Count(i => i.CurrentStatus == "Submitted" || i.CurrentStatus == "Under Review");
+            var approved = allIdeas.Count(i => i.CurrentStatus == "Approved");
 
             return (total, pending, approved);
         }

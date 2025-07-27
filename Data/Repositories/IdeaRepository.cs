@@ -22,10 +22,16 @@ namespace Ideku.Data.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Idea>> GetByInitiatorAsync(string initiator)
+        // 🔥 FIX: Disederhanakan untuk mencari langsung berdasarkan badge number initiator
+        public async Task<List<Idea>> GetByInitiatorAsync(string initiatorBadgeNumber)
         {
+            if (string.IsNullOrEmpty(initiatorBadgeNumber))
+            {
+                return new List<Idea>();
+            }
+
             return await _context.Ideas
-                .Where(i => i.InitiatorId == initiator)
+                .Where(i => i.InitiatorId == initiatorBadgeNumber)
                 .Include(i => i.Category)
                 .Include(i => i.Event)
                 .OrderByDescending(i => i.SubmittedDate)

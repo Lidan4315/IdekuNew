@@ -1,5 +1,6 @@
 ﻿// Auto-hide alerts
 document.addEventListener('DOMContentLoaded', function() {
+    /*
     // Auto-hide alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(function(alert) {
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 5000);
     });
+    */
 
     // Form enhancements
     enhanceForms();
@@ -20,16 +22,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Form enhancements
 function enhanceForms() {
-    const forms = document.querySelectorAll('form');
-    forms.forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn && form.checkValidity()) {
-                submitBtn.innerHTML = '<i class="bi bi-spinner-border spinner-border-sm me-2"></i>Processing...';
-                submitBtn.disabled = true;
-            }
-        });
-    });
+    // const forms = document.querySelectorAll('form');
+    // forms.forEach(function(form) {
+    //     form.addEventListener('submit', function(event) {
+    //         const submitBtn = form.querySelector('button[type="submit"]');
+    //         if (submitBtn && form.checkValidity()) {
+    //             submitBtn.innerHTML = '<i class="bi bi-spinner-border spinner-border-sm me-2"></i>Processing...';
+    //             submitBtn.disabled = true;
+    //         }
+    //     });
+    // });
 }
 
 // Button enhancements
