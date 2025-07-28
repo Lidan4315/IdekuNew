@@ -251,7 +251,7 @@ static void SeedDatabase(IServiceProvider services)
         new Ideku.Models.Entities.User
         {
             EmployeeId = "EMP001",
-            RoleId = "R03", // Initiator role
+            RoleId = "R01", // Initiator role
             Username = "john.doe",
             Name = "John Doe",
             FlagActing = false

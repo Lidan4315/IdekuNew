@@ -40,9 +40,6 @@
                 
                 @if (User.Identity.IsAuthenticated)
                 {
-                    <li class="nav-divider">
-                        <span>Management</span>
-                    </li>
                     <li>
                         <a asp-controller="Validation" asp-action="List" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Validation" ? "active" : "")">
                             <i class="bi bi-check-square-fill"></i>
