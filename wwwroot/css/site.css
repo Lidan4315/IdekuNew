@@ -30,8 +30,10 @@ body {
     z-index: 100;
 }
 
+
 .sidebar-header {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 0;
+    margin: 0;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -50,7 +52,7 @@ body {
 
 .nav-links {
     list-style: none;
-    padding: 1rem 0;
+    padding: 0;
     margin: 0;
     flex: 1;
 }
@@ -58,7 +60,8 @@ body {
 .nav-links li a {
     display: flex;
     align-items: center;
-    padding: 1rem 1.5rem;
+    padding: 0 1.5rem;
+    height: 48px;
     color: white;
     text-decoration: none;
     transition: all 0.3s ease;
@@ -286,27 +289,6 @@ body {
 }
 
 /* Forms */
-.form-section {
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-}
-
-.form-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.section-title {
-    color: #2c3e50;
-    margin-bottom: 1.5rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-}
-
-.section-title i {
-    color: #667eea;
-}
 
 .form-label {
     font-weight: 500;
@@ -314,10 +296,6 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.form-label.required::after {
-    content: " *";
-    color: #dc3545;
-}
 
 .form-control,
 .form-select {
@@ -327,11 +305,6 @@ body {
     transition: all 0.3s ease;
 }
 
-.form-control:focus,
-.form-select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-}
 
 /* Tables */
 .table {
@@ -450,23 +423,6 @@ body {
     font-weight: 600;
 }
 
-/* Alerts */
-.alert {
-    border: none;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem;
-}
-
-.alert-success {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-    color: #155724;
-}
-
-.alert-danger {
-    background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
-    color: #721c24;
-}
 
 /* Current File Display */
 .current-file {
@@ -502,12 +458,6 @@ body {
 }
 
 /* 📍 Add CSS ini ke site.css untuk logo only */
-
-.sidebar-header {
-    padding: 1.5rem 0;
-    /* border-bottom: 1px solid rgba(255, 255, 255, 0.1); */
-    margin-bottom: 1rem;
-}
 
 .logo-only .logo-container {
     display: flex;
@@ -598,7 +548,6 @@ body {
 /* Form section spacing */
 .form-section {
     margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid #e9ecef;
 }

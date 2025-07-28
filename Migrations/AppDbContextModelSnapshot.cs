@@ -227,10 +227,9 @@ namespace Ideku.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("cImsCode");
 
-                    b.Property<string>("Initiator")
+                    b.Property<string>("InitiatorId")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasColumnType("varchar(10)")
                         .HasColumnName("cInitiator");
 
                     b.Property<string>("Payload")
@@ -272,6 +271,8 @@ namespace Ideku.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("EventId");
+
+                    b.HasIndex("InitiatorId");
 
                     b.ToTable("ideas");
                 });
@@ -391,9 +392,17 @@ namespace Ideku.Migrations
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Ideku.Models.Entities.Employee", "Initiator")
+                        .WithMany()
+                        .HasForeignKey("InitiatorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Category");
 
                     b.Navigation("Event");
+
+                    b.Navigation("Initiator");
                 });
 
             modelBuilder.Entity("Ideku.Models.Entities.User", b =>

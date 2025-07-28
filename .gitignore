@@ -40,7 +40,7 @@ wwwroot/uploads/
 secrets.json
 
 # EF Core migrations
-# /Migrations/
+/Migrations/
 
 # Nuget packages
 *.nupkg
