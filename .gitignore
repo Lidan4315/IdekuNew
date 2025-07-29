@@ -31,7 +31,7 @@ bld/
 *.DotSettings.user
 
 # App settings
-# appsettings.Development.json
+appsettings.Development.json
 
 # Uploads
 wwwroot/uploads/

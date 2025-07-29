@@ -6,6 +6,7 @@ using Ideku.Models.Entities;
 using Ideku.Models.ViewModels.Idea;
 using Ideku.Data.Context;
 using Microsoft.Extensions.Options;
+using System.IO.Compression;
 
 namespace Ideku.Controllers
 {
@@ -520,6 +521,58 @@ namespace Ideku.Controllers
             }
         }
 
+        // GET: /Idea/DownloadAll/5 - Download all attachments as a zip file
+        [HttpGet]
+        public async Task<IActionResult> DownloadAll(int ideaId)
+        {
+            try
+            {
+                var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
+                if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile))
+                {
+                    return NotFound();
+                }
+
+                var currentUserBadge = User.Identity?.Name ?? "";
+                var user = await _authService.AuthenticateAsync(currentUserBadge);
+
+                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+                bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
+
+                bool hasAccess = idea.InitiatorId == currentUserBadge || isValidator;
+
+                if (!hasAccess)
+                {
+                    return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
+                }
+
+                var zipFileName = $"Idea-{ideaId}-Attachments.zip";
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                    {
+                        foreach (var file in idea.AttachmentFile.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", file);
+                            if (System.IO.File.Exists(filePath))
+                            {
+                                var originalFileName = file.Length > 37 ? file.Substring(37) : file;
+                                archive.CreateEntryFromFile(filePath, originalFileName);
+                            }
+                        }
+                    }
+
+                    return File(memoryStream.ToArray(), "application/zip", zipFileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating zip file for idea {IdeaId}", ideaId);
+                TempData["ErrorMessage"] = "Unable to create zip file for download.";
+                return RedirectToAction("Index");
+            }
+        }
+
         // GET: /Idea/Download/filename - Download attachment
         [HttpGet]
         public async Task<IActionResult> Download(string filename, int ideaId)
@@ -533,7 +586,7 @@ namespace Ideku.Controllers
 
                 // Verify user has access to this idea
                 var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
-                if (idea == null || idea.AttachmentFile != filename)
+                if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile) || !idea.AttachmentFile.Split(';').Contains(filename))
                 {
                     return NotFound();
                 }
@@ -541,13 +594,17 @@ namespace Ideku.Controllers
                 var currentUserBadge = User.Identity?.Name ?? "";
                 var user = await _authService.AuthenticateAsync(currentUserBadge); // Authenticate to get User object with Role
 
-                // Check permissions: user is owner, manager, or superadmin
+                // Periksa izin: pengguna adalah pemilik, validator, manajer, atau superadmin
+                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+                bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
+
                 bool hasAccess = idea.InitiatorId == currentUserBadge ||
-                                 (user?.Role != null && (user.Role.RoleName == "Manager" || user.Role.RoleName == "SuperAdmin"));
+                                 isValidator;
 
                 if (!hasAccess)
                 {
-                    return Forbid();
+                    // Alihkan ke halaman Access Denied dengan URL kembali
+                    return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
                 }
 
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", filename);

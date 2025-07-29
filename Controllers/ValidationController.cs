@@ -119,16 +119,16 @@ namespace Ideku.Controllers
 
                 await _ideaService.UpdateIdeaAsync(idea);
 
-                // Send notification email to submitter
+                // Kirim email notifikasi di latar belakang
                 var submitter = await _authService.GetEmployeeByBadgeAsync(idea.InitiatorId);
                 if (submitter != null && !string.IsNullOrEmpty(submitter.Email))
                 {
-                    await _emailService.SendIdeaStatusUpdateAsync(
-                        submitter.Email, 
-                        idea.IdeaName, 
-                        "Approved", 
+                    _ = _emailService.SendIdeaStatusUpdateAsync(
+                        submitter.Email,
+                        idea.IdeaName,
+                        "Approved",
                         comments
-                    );
+                    ).ConfigureAwait(false);
                 }
 
                 _logger.LogInformation($"Idea {id} approved by {User.Identity?.Name}");
@@ -167,16 +167,16 @@ namespace Ideku.Controllers
 
                 await _ideaService.UpdateIdeaAsync(idea);
 
-                // Send notification email to submitter
+                // Kirim email notifikasi di latar belakang
                 var submitter = await _authService.GetEmployeeByBadgeAsync(idea.InitiatorId);
                 if (submitter != null && !string.IsNullOrEmpty(submitter.Email))
                 {
-                    await _emailService.SendIdeaStatusUpdateAsync(
-                        submitter.Email, 
-                        idea.IdeaName, 
-                        "Rejected", 
+                    _ = _emailService.SendIdeaStatusUpdateAsync(
+                        submitter.Email,
+                        idea.IdeaName,
+                        "Rejected",
                         rejectReason
-                    );
+                    ).ConfigureAwait(false);
                 }
 
                 _logger.LogInformation($"Idea {id} rejected by {User.Identity?.Name}");

@@ -218,7 +218,7 @@ static void SeedDatabase(IServiceProvider services)
         {
             Id = "EMP002",
             Name = "Jane Smith",
-            Email = "jane.smith@company.com",
+            Email = "aryakusumaaa22@gmail.com",
             DepartementId = "P02",
             DivisiId = "D02",
             PositionTitle = "HR Manager"
@@ -227,7 +227,7 @@ static void SeedDatabase(IServiceProvider services)
         {
             Id = "EMP003",
             Name = "Alice Johnson",
-            Email = "alice.johnson@company.com",
+            Email = "aryakusumaaa22@gmail.com",
             DepartementId = "P03",
             DivisiId = "D03",
             PositionTitle = "QA Engineer"
