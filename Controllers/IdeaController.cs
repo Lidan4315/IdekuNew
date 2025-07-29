@@ -645,6 +645,81 @@ namespace Ideku.Controllers
             }
         }
 
+        // 🔥 NEW: GET: /Idea/ViewAttachment/filename - View attachment inline
+        [HttpGet]
+        public async Task<IActionResult> ViewAttachment(string filename, int ideaId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(filename))
+                {
+                    return NotFound();
+                }
+
+                // Verify user has access to this idea (same logic as Download)
+                var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
+                if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile) || !idea.AttachmentFile.Split(';').Contains(filename))
+                {
+                    return NotFound();
+                }
+
+                var currentUserBadge = User.Identity?.Name ?? "";
+                var user = await _authService.AuthenticateAsync(currentUserBadge);
+
+                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+                bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
+
+                bool hasAccess = idea.InitiatorId == currentUserBadge || isValidator;
+
+                if (!hasAccess)
+                {
+                    return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
+                }
+
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", filename);
+                if (!System.IO.File.Exists(filePath))
+                {
+                    TempData["ErrorMessage"] = "File not found.";
+                    return RedirectToAction("Details", new { id = ideaId });
+                }
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+                
+                // Determine content type for inline viewing
+                var contentType = GetContentType(filename);
+
+                // 🔥 FIX: Return the file without a download name.
+                // This encourages the browser to display the file inline instead of downloading it.
+                return File(fileBytes, contentType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error viewing file {Filename} for idea {IdeaId}", filename, ideaId);
+                TempData["ErrorMessage"] = "Unable to view file.";
+                return RedirectToAction("Index");
+            }
+        }
+
+        private string GetContentType(string path)
+        {
+            var types = new Dictionary<string, string>
+            {
+                {".pdf", "application/pdf"},
+                {".doc", "application/vnd.ms-word"},
+                {".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+                {".xls", "application/vnd.ms-excel"},
+                {".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+                {".png", "image/png"},
+                {".jpg", "image/jpeg"},
+                {".jpeg", "image/jpeg"},
+                {".gif", "image/gif"},
+                {".csv", "text/csv"}
+            };
+            
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return types.GetValueOrDefault(ext, "application/octet-stream");
+        }
+        
         // API: /Idea/GetUserStats
         [HttpGet]
         public async Task<IActionResult> GetUserStats()
