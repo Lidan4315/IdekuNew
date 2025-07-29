@@ -248,34 +248,41 @@ namespace Ideku.Controllers
 
                     var createdIdea = await _ideaService.CreateIdeaAsync(idea);
 
-                    try
-                    {
-                        if (_emailSettings.ValidatorEmails?.Any() == true)
-                        {
-                            var submitterName = employee?.Name ?? model.BadgeNumber;
-                            var emailSent = await _emailService.SendIdeaSubmissionNotificationAsync(
-                                createdIdea.IdeaName, submitterName, model.BadgeNumber, createdIdea.Id, _emailSettings.ValidatorEmails);
+                    // Update status ide terlebih dahulu
+                    createdIdea.CurrentStatus = "Under Review";
+                    await _ideaService.UpdateIdeaAsync(createdIdea);
 
-                            if (emailSent)
+                    // 🔥 FIX: Kirim email di latar belakang agar tidak memblokir respons UI
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (_emailSettings.ValidatorEmails?.Any() == true)
                             {
-                                _logger.LogInformation("Validation emails sent for idea {IdeaId}", createdIdea.Id);
-                                createdIdea.CurrentStatus = "Under Review";
-                                await _ideaService.UpdateIdeaAsync(createdIdea);
+                                var submitterName = employee?.Name ?? model.BadgeNumber;
+                                var emailSent = await _emailService.SendIdeaSubmissionNotificationAsync(
+                                    createdIdea.IdeaName, submitterName, model.BadgeNumber, createdIdea.Id, _emailSettings.ValidatorEmails);
+
+                                if (emailSent)
+                                {
+                                    _logger.LogInformation("BACKGROUND JOB: Validation emails sent for idea {IdeaId}", createdIdea.Id);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("BACKGROUND JOB: Failed to send validation emails for idea {IdeaId}", createdIdea.Id);
+                                }
                             }
                             else
                             {
-                                _logger.LogWarning("Failed to send validation emails for idea {IdeaId}", createdIdea.Id);
+                                _logger.LogWarning("BACKGROUND JOB: No validator emails configured.");
                             }
                         }
-                        else
+                        catch (Exception emailEx)
                         {
-                            _logger.LogWarning("No validator emails configured");
+                            // Karena ini berjalan di latar belakang, kita hanya bisa log errornya
+                            _logger.LogError(emailEx, "BACKGROUND JOB: Error sending validation emails for idea {IdeaId}", createdIdea.Id);
                         }
-                    }
-                    catch (Exception emailEx)
-                    {
-                        _logger.LogError(emailEx, "Error sending validation emails for idea {IdeaId}", createdIdea.Id);
-                    }
+                    });
 
                     return Json(new { success = true, message = "Idea submitted successfully! A notification will be sent to the validator." });
                 }
