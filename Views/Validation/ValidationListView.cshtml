@@ -24,42 +24,6 @@
     </div>
 </div>
 
-<!-- Stats Summary -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="stat-card bg-warning">
-            <div class="stat-icon">
-                <i class="bi bi-clock"></i>
-            </div>
-            <div class="stat-content">
-                <h3>@Model.TotalPending</h3>
-                <p>Total Pending</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card bg-info">
-            <div class="stat-icon">
-                <i class="bi bi-file-earmark"></i>
-            </div>
-            <div class="stat-content">
-                <h3>@Model.SubmittedCount</h3>
-                <p>Newly Submitted</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="stat-card bg-primary">
-            <div class="stat-icon">
-                <i class="bi bi-eye"></i>
-            </div>
-            <div class="stat-content">
-                <h3>@Model.UnderReviewCount</h3>
-                <p>Under Review</p>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Ideas Table -->
 <div class="card">
@@ -81,6 +45,7 @@
                             <th>Saving Cost</th>
                             <th>Status</th>
                             <th>Submitted</th>
+                            <th>Delete</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -162,6 +127,9 @@
                                     <div>@idea.SubmittedDate.ToString("MMM dd")</div>
                                     <small class="text-muted">@idea.SubmittedDate.ToString("HH:mm")</small>
                                 </td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm delete-idea-btn" data-id="@idea.Id" onclick="event.stopPropagation();"><i class="bi bi-trash"></i></button>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -184,4 +152,66 @@
 
 @section Scripts {
     @Html.AntiForgeryToken()
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const deleteButtons = document.querySelectorAll('.delete-idea-btn');
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const ideaId = this.getAttribute('data-id');
+                    const row = this.closest('tr');
+
+                    Swal.fire({
+                        title: 'Apakah Anda yakin?',
+                        text: "Anda tidak akan dapat mengembalikan tindakan ini!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Ya, hapus!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch(`/Validation/Delete/${ideaId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'RequestVerificationToken': token,
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire(
+                                        'Dihapus!',
+                                        data.message,
+                                        'success'
+                                    );
+                                    row.remove();
+                                } else {
+                                    Swal.fire(
+                                        'Gagal!',
+                                        data.message,
+                                        'error'
+                                    );
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire(
+                                    'Error!',
+                                    'Terjadi kesalahan saat mencoba menghapus ide.',
+                                    'error'
+                                );
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    </script>
 }
