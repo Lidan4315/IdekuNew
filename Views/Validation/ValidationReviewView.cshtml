@@ -120,10 +120,17 @@
                                 var originalFileName = file.Length > 37 ? file.Substring(37) : file;
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
                                     <span>@originalFileName</span>
-                                    <a asp-controller="Idea" asp-action="Download" asp-route-filename="@file" asp-route-ideaId="@Model.IdeaId"
-                                       target="_blank" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-download me-1"></i> Unduh
-                                    </a>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm view-attachment-btn" 
+                                                data-url="@Url.Action("ViewAttachment", "Idea", new { filename = file, ideaId = Model.IdeaId })"
+                                                data-filename="@originalFileName">
+                                            <i class="bi bi-eye me-1"></i> Lihat
+                                        </button>
+                                        <a asp-controller="Idea" asp-action="Download" asp-route-filename="@file" asp-route-ideaId="@Model.IdeaId"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-download me-1"></i> Unduh
+                                        </a>
+                                    </div>
                                 </li>
                             }
                         </ul>
@@ -241,6 +248,21 @@
     </div>
 </div>
 
+<!-- Attachment Viewer Modal -->
+<div class="modal fade" id="attachmentViewerModal" tabindex="-1" aria-labelledby="attachmentViewerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="attachmentViewerModalLabel">Attachment Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="attachmentViewerBody" style="height: 80vh;">
+        <!-- Content will be injected here by JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -347,6 +369,54 @@
                 });
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const attachmentModal = new bootstrap.Modal(document.getElementById('attachmentViewerModal'));
+            const modalBody = document.getElementById('attachmentViewerBody');
+            const modalTitle = document.getElementById('attachmentViewerModalLabel');
+
+            document.querySelectorAll('.view-attachment-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const url = this.dataset.url;
+                    const filename = this.dataset.filename;
+                    const extension = filename.split('.').pop().toLowerCase();
+
+                    modalTitle.textContent = `Preview: ${filename}`;
+                    modalBody.innerHTML = ''; // Clear previous content
+
+                    if (['png', 'jpg', 'jpeg', 'gif', 'pdf'].includes(extension)) {
+                        if (extension === 'pdf') {
+                            const iframe = document.createElement('iframe');
+                            iframe.src = url;
+                            iframe.style.width = '100%';
+                            iframe.style.height = '100%';
+                            iframe.style.border = 'none';
+                            modalBody.appendChild(iframe);
+                        } else {
+                            const img = document.createElement('img');
+                            img.src = url;
+                            img.style.maxWidth = '100%';
+                            img.style.maxHeight = '100%';
+                            img.style.objectFit = 'contain';
+                            modalBody.appendChild(img);
+                        }
+                    } else {
+                        // 🔥 FIX: Point the link to the 'Download' action for a reliable download.
+                        const downloadUrl = url.replace('ViewAttachment', 'Download');
+                        modalBody.innerHTML = `
+                            <div class="text-center p-5">
+                                <p>Preview for this file type is not available.</p>
+                                <a href="${downloadUrl}" class="btn btn-primary">
+                                    <i class="bi bi-download me-2"></i>Download "${filename}"
+                                </a>
+                            </div>
+                        `;
+                    }
+                    
+                    attachmentModal.show();
+                });
+            });
+        });
     </script>
     
     @Html.AntiForgeryToken()
