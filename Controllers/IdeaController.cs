@@ -224,10 +224,15 @@ namespace Ideku.Controllers
                     var attachmentFileNames = new List<string>();
                     if (model.AttachmentFiles != null)
                     {
+                        int fileIndex = 1;
                         foreach (var file in model.AttachmentFiles)
                         {
-                            var savedFileName = await _fileService.SaveFileAsync(file);
-                            attachmentFileNames.Add(savedFileName);
+                            // 🔥 FIX: Pass integer stage '0' for submission
+                            var savedFileName = await _fileService.SaveFileAsync(file, model.BadgeNumber, 0, fileIndex++);
+                            if (savedFileName != null)
+                            {
+                                attachmentFileNames.Add(savedFileName);
+                            }
                         }
                     }
 
@@ -439,10 +444,15 @@ namespace Ideku.Controllers
                         }
 
                         // Save new files
+                        int fileIndex = 1;
                         foreach (var file in model.AttachmentFiles)
                         {
-                            var savedFileName = await _fileService.SaveFileAsync(file);
-                            attachmentFileNames.Add(savedFileName);
+                            // 🔥 FIX: Pass integer stage '0' for submission
+                            var savedFileName = await _fileService.SaveFileAsync(file, model.BadgeNumber, 0, fileIndex++);
+                            if (savedFileName != null)
+                            {
+                                attachmentFileNames.Add(savedFileName);
+                            }
                         }
                         existingIdea.AttachmentFile = string.Join(";", attachmentFileNames);
                     }
@@ -546,7 +556,8 @@ namespace Ideku.Controllers
                     return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
                 }
 
-                var zipFileName = $"Idea-{ideaId}-Attachments.zip";
+                var stageString = $"S{idea.CurrentStage}";
+                var zipFileName = $"{idea.InitiatorId}_{stageString}.zip";
                 using (var memoryStream = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
