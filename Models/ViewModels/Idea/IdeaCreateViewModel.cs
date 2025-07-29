@@ -49,7 +49,7 @@ namespace Ideku.Models.ViewModels.Idea
 
         [Required(ErrorMessage = "Issue Background is required")]
         [StringLength(2000, ErrorMessage = "Issue Background cannot exceed 2000 characters")]
-        [Display(Name = "Issue Background")]
+        [Display(Name = "Idea Description")]
         public string IdeaIssueBackground { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Solution is required")]
