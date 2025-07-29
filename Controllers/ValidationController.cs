@@ -233,5 +233,31 @@ namespace Ideku.Controllers
                 return RedirectToAction("Index", "Home");
             }
         }
+
+        // POST: /Validation/Delete/5 - Hapus ide
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var idea = await _context.Ideas.FindAsync(id);
+                if (idea == null)
+                {
+                    return Json(new { success = false, message = "Ide tidak ditemukan." });
+                }
+
+                _context.Ideas.Remove(idea);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Idea {id} dihapus oleh {User.Identity?.Name}");
+                return Json(new { success = true, message = "Ide berhasil dihapus!" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Kesalahan saat menghapus ide {id}");
+                return Json(new { success = false, message = "Terjadi kesalahan saat menghapus ide." });
+            }
+        }
     }
 }
