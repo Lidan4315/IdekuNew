@@ -9,7 +9,7 @@ namespace Ideku.Services
             _webHostEnvironment = webHostEnvironment;
         }
 
-        public async Task<string?> SaveFileAsync(IFormFile file)
+        public async Task<string?> SaveFileAsync(IFormFile file, string idImplementor, int currentStage, int fileIndex)
         {
             if (file == null || file.Length == 0)
                 return null;
@@ -20,8 +20,21 @@ namespace Ideku.Services
                 Directory.CreateDirectory(uploadPath);
             }
 
-            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+            // Format the stage integer into the desired string format "S<number>"
+            var stageString = $"S{currentStage}";
+
+            var fileExtension = Path.GetExtension(file.FileName);
+            var tempFileIndex = fileIndex;
+            var fileName = $"{idImplementor}_{stageString}_{tempFileIndex:D3}{fileExtension}";
             var filePath = Path.Combine(uploadPath, fileName);
+
+            // Handle potential file name conflicts by incrementing the index
+            while (File.Exists(filePath))
+            {
+                tempFileIndex++;
+                fileName = $"{idImplementor}_{stageString}_{tempFileIndex:D3}{fileExtension}";
+                filePath = Path.Combine(uploadPath, fileName);
+            }
 
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
