@@ -171,7 +171,7 @@
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-success" onclick="approveIdea()">
+                    <button type="button" class="btn btn-success" id="approve-idea-btn">
                         <i class="bi bi-check-circle me-2"></i>Approve Idea
                     </button>
                 </div>
@@ -186,7 +186,7 @@
                         <textarea class="form-control" id="rejectionReason" rows="3" placeholder="Please provide a clear reason for rejection"></textarea>
                         <small class="form-text text-muted">This reason will be sent to the submitter</small>
                     </div>
-                    <button type="button" class="btn btn-danger" onclick="rejectIdea()">
+                    <button type="button" class="btn btn-danger" id="reject-idea-btn">
                         <i class="bi bi-x-circle me-2"></i>Reject Idea
                     </button>
                 </div>
@@ -263,160 +263,17 @@
   </div>
 </div>
 
+<!-- Data container for JavaScript -->
+<div id="validation-data-container" 
+     data-idea-id="@Model.IdeaId"
+     data-approve-url="@Url.Action("Approve", "Validation")"
+     data-reject-url="@Url.Action("Reject", "Validation")"
+     data-list-url="@Url.Action("List", "Validation")"
+     data-view-attachment-url="@Url.Action("ViewAttachment", "Idea", new { ideaId = Model.IdeaId })"
+     data-download-attachment-url="@Url.Action("Download", "Idea", new { ideaId = Model.IdeaId })">
+</div>
+
 @section Scripts {
-    <script>
-        function approveIdea() {
-            const comments = document.getElementById('approvalComments').value;
-            const validatedCost = document.getElementById('validatedSavingCost').value;
-
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you really want to approve this idea?",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, approve it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch('@Url.Action("Approve", "Validation")/' + @Model.IdeaId, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                        },
-                        body: new URLSearchParams({
-                            'comments': comments,
-                            'validatedSavingCost': validatedCost
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            showAlert('success', data.message);
-                        } else {
-                            showAlert('danger', data.message);
-                        }
-                    })
-                    .catch(error => {
-                        showAlert('danger', 'An error occurred while processing your request.');
-                    });
-                }
-            });
-        }
-
-        function rejectIdea() {
-            const reason = document.getElementById('rejectionReason').value.trim();
-            
-            if (!reason) {
-                showAlert('warning', 'Please provide a rejection reason.');
-                return;
-            }
-            
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you really want to reject this idea? This action cannot be undone.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, reject it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch('@Url.Action("Reject", "Validation")/' + @Model.IdeaId, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                        },
-                        body: new URLSearchParams({
-                            'rejectReason': reason
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            showAlert('success', data.message);
-                        } else {
-                            showAlert('danger', data.message);
-                        }
-                    })
-                    .catch(error => {
-                        showAlert('danger', 'An error occurred while processing your request.');
-                    });
-                }
-            });
-        }
-
-
-        function showAlert(type, message) {
-            if (type === 'success') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: message,
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.href = '@Url.Action("List", "Validation")';
-                });
-            } else {
-                Swal.fire({
-                    icon: type, // 'warning' or 'danger'
-                    title: 'Oops...',
-                    text: message
-                });
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const attachmentModal = new bootstrap.Modal(document.getElementById('attachmentViewerModal'));
-            const modalBody = document.getElementById('attachmentViewerBody');
-            const modalTitle = document.getElementById('attachmentViewerModalLabel');
-
-            document.querySelectorAll('.view-attachment-btn').forEach(button => {
-                button.addEventListener('click', function () {
-                    const url = this.dataset.url;
-                    const filename = this.dataset.filename;
-                    const extension = filename.split('.').pop().toLowerCase();
-
-                    modalTitle.textContent = `Preview: ${filename}`;
-                    modalBody.innerHTML = ''; // Clear previous content
-
-                    if (['png', 'jpg', 'jpeg', 'gif', 'pdf'].includes(extension)) {
-                        if (extension === 'pdf') {
-                            const iframe = document.createElement('iframe');
-                            iframe.src = url;
-                            iframe.style.width = '100%';
-                            iframe.style.height = '100%';
-                            iframe.style.border = 'none';
-                            modalBody.appendChild(iframe);
-                        } else {
-                            const img = document.createElement('img');
-                            img.src = url;
-                            img.style.maxWidth = '100%';
-                            img.style.maxHeight = '100%';
-                            img.style.objectFit = 'contain';
-                            modalBody.appendChild(img);
-                        }
-                    } else {
-                        // 🔥 FIX: Point the link to the 'Download' action for a reliable download.
-                        const downloadUrl = url.replace('ViewAttachment', 'Download');
-                        modalBody.innerHTML = `
-                            <div class="text-center p-5">
-                                <p>Preview for this file type is not available.</p>
-                                <a href="${downloadUrl}" class="btn btn-primary">
-                                    <i class="bi bi-download me-2"></i>Download "${filename}"
-                                </a>
-                            </div>
-                        `;
-                    }
-                    
-                    attachmentModal.show();
-                });
-            });
-        });
-    </script>
-    
     @Html.AntiForgeryToken()
+    <script src="~/js/pages/validation-review.js" asp-append-version="true"></script>
 }

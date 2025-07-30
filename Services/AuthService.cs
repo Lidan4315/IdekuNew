@@ -6,10 +6,12 @@ namespace Ideku.Services
     public class AuthService
     {
         private readonly UserRepository _userRepository;
+        private readonly EmployeeRepository _employeeRepository;
 
-        public AuthService(UserRepository userRepository)
+        public AuthService(UserRepository userRepository, EmployeeRepository employeeRepository)
         {
             _userRepository = userRepository;
+            _employeeRepository = employeeRepository;
         }
 
         public async Task<User?> AuthenticateAsync(string username)
@@ -25,7 +27,7 @@ namespace Ideku.Services
 
         public async Task<Employee?> GetEmployeeByBadgeAsync(string badgeNumber)
         {
-            return await _userRepository.GetEmployeeByBadgeAsync(badgeNumber);
+            return await _employeeRepository.GetByBadgeAsync(badgeNumber);
         }
 
         public async Task<string?> GetCurrentUserBadgeNumberAsync(System.Security.Claims.ClaimsPrincipal user)
