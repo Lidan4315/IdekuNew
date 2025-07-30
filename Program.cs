@@ -18,11 +18,17 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 // Add Repository services
 builder.Services.AddScoped<IdeaRepository>();
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<EmployeeRepository>();
+builder.Services.AddScoped<DepartmentRepository>();
+builder.Services.AddScoped<DivisionRepository>();
+builder.Services.AddScoped<CategoryRepository>();
+builder.Services.AddScoped<EventRepository>();
 
 // Add Business services
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<FileService>();
+builder.Services.AddScoped<OrganizationService>();
 
 // 🔥 NEW: Add Email Service
 builder.Services.AddScoped<EmailService>();

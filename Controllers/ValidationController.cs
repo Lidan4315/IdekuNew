@@ -208,15 +208,7 @@ namespace Ideku.Controllers
                 }
 
                 // Get all ideas for the validation list
-                var pendingIdeas = await _context.Ideas
-                    .Include(i => i.Category)
-                    .Include(i => i.Event)
-                    .Include(i => i.Initiator)
-                        .ThenInclude(e => e.Divisi)
-                    .Include(i => i.Initiator)
-                        .ThenInclude(e => e.Departement)
-                    .OrderByDescending(i => i.SubmittedDate)
-                    .ToListAsync();
+                var pendingIdeas = await _ideaService.GetAllIdeasForValidationAsync();
 
                 var viewModel = new ValidationListViewModel
                 {
@@ -241,14 +233,13 @@ namespace Ideku.Controllers
         {
             try
             {
-                var idea = await _context.Ideas.FindAsync(id);
+                var idea = await _ideaService.GetIdeaByIdAsync(id);
                 if (idea == null)
                 {
                     return Json(new { success = false, message = "Ide tidak ditemukan." });
                 }
 
-                _context.Ideas.Remove(idea);
-                await _context.SaveChangesAsync();
+                await _ideaService.DeleteIdeaAsync(id);
 
                 _logger.LogInformation($"Idea {id} dihapus oleh {User.Identity?.Name}");
                 return Json(new { success = true, message = "Ide berhasil dihapus!" });

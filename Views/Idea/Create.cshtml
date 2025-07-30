@@ -252,172 +252,18 @@
     </div>
 </div>
 
+<!-- Data container for JavaScript -->
+<div id="idea-form-data"
+     data-is-edit="@isEdit.ToString().ToLower()"
+     data-to-division="@Model.ToDivision"
+     data-to-department="@Model.ToDepartment"
+     data-badge-number="@Model.BadgeNumber"
+     data-url-get-departments="@Url.Action("GetDepartmentsByDivision")"
+     data-url-get-employee="@Url.Action("GetEmployeeByBadge")"
+     data-url-redirect="@Url.Action("Index", "Idea")">
+</div>
+
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
-    <script>
-        $(document).ready(function() {
-            // --- EXISTING LOGIC FOR BADGE LOOKUP AND DEPARTMENT DROPDOWN ---
-            let badgeTimeout;
-            $('#BadgeNumber').on('input', function() {
-                clearTimeout(badgeTimeout);
-                const badgeNumber = $(this).val().trim();
-                if (badgeNumber.length >= 3) {
-                    badgeTimeout = setTimeout(() => fetchEmployeeData(badgeNumber), 500);
-                } else {
-                    $('#employee-profile').slideUp();
-                }
-            });
-
-            $('#divisionSelect').change(function() {
-                const selectedDivision = $(this).val();
-                const departmentSelect = $('#departmentSelect');
-                departmentSelect.val('');
-                if (selectedDivision) {
-                    $('#department-loading').show();
-                    departmentSelect.prop('disabled', true);
-                    $.ajax({
-                        url: '@Url.Action("GetDepartmentsByDivision")',
-                        data: { divisionId: selectedDivision },
-                        success: function(response) {
-                            departmentSelect.prop('disabled', false);
-                            $('#department-loading').hide();
-                            if (response.success) {
-                                departmentSelect.html('<option value="">-- Select To Department --</option>');
-                                $.each(response.data, (index, dept) => {
-                                    departmentSelect.append($('<option></option>').val(dept.id).text(dept.name));
-                                });
-                                @if (isEdit && !string.IsNullOrEmpty(Model.ToDepartment)) {
-                                    <text>departmentSelect.val('@Model.ToDepartment');</text>
-                                }
-                            } else {
-                                departmentSelect.html('<option value="">-- No departments found --</option>');
-                            }
-                        },
-                        error: () => {
-                            $('#department-loading').hide();
-                            departmentSelect.prop('disabled', false);
-                            departmentSelect.html('<option value="">-- Error loading --</option>');
-                        }
-                    });
-                } else {
-                    departmentSelect.html('<option value="">-- Select To Division First --</option>');
-                    departmentSelect.prop('disabled', false);
-                }
-            });
-
-            function fetchEmployeeData(badgeNumber) {
-                $('#badge-loading').show();
-                $.ajax({
-                    url: '@Url.Action("GetEmployeeByBadge")',
-                    data: { badgeNumber: badgeNumber },
-                    success: function(response) {
-                        $('#badge-loading').hide();
-                        if (response.success) {
-                            $('#employee-name').val(response.data.name);
-                            $('#employee-email').val(response.data.email);
-                            $('#employee-position').val(response.data.position);
-                            $('#employee-division').val(response.data.division);
-                            $('#employee-department').val(response.data.department);
-                            $('#employee-profile').slideDown();
-                            $('#badge-error').hide();
-                        } else {
-                            $('#badge-error').text(response.message || 'Employee not found').show();
-                            $('#employee-profile').slideUp();
-                        }
-                    },
-                    error: () => {
-                        $('#badge-loading').hide();
-                        $('#badge-error').text('Error fetching employee data.').show();
-                        $('#employee-profile').slideUp();
-                    }
-                });
-            }
-
-            // Initialize for edit mode
-            @if (isEdit && !string.IsNullOrEmpty(Model.ToDivision)) {
-                <text>
-                setTimeout(() => $('#divisionSelect').val('@Model.ToDivision').trigger('change'), 100);
-                </text>
-            }
-            @if (isEdit && !string.IsNullOrEmpty(Model.BadgeNumber)) {
-                <text>
-                setTimeout(() => fetchEmployeeData('@Model.BadgeNumber'), 100);
-                </text>
-            }
-
-            // --- NEW AJAX SUBMISSION LOGIC ---
-            $('form').on('submit', function(e) {
-                e.preventDefault(); // Prevent the default form submission
-
-                const form = $(this);
-                const submitBtn = $('#submit-btn');
-                const originalBtnText = submitBtn.html();
-
-                // Use unobtrusive validation to check form validity
-                if (!form.valid()) {
-                    showAlert('warning', 'Please fill in all required fields correctly.');
-                    return;
-                }
-
-                submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...').prop('disabled', true);
-
-                const formData = new FormData(this);
-
-                fetch(form.attr('action'), {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        // The 'RequestVerificationToken' is included in FormData automatically by the form helper
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        // Try to parse error response as JSON, but fallback to text
-                        return response.json().catch(() => response.text()).then(errorBody => {
-                            throw new Error(`Server responded with ${response.status}. Body: ${JSON.stringify(errorBody)}`);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        showAlert('success', data.message, data.redirectUrl);
-                    } else {
-                        // Join array of errors if it exists
-                        const errorMessage = data.errors ? data.message + '<br><br>' + data.errors.join('<br>') : data.message;
-                        showAlert('error', errorMessage);
-                        submitBtn.html(originalBtnText).prop('disabled', false);
-                    }
-                })
-                .catch(error => {
-                    console.error("Fetch Error:", error);
-                    showAlert('error', 'A network or script error occurred. Please check the console and try again.');
-                    submitBtn.html(originalBtnText).prop('disabled', false);
-                });
-            });
-
-            function showAlert(type, message, redirectUrl = null) {
-                if (type === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        html: message, // Use html to render <br> tags if any
-                        timer: 2500,
-                        showConfirmButton: false,
-                        allowOutsideClick: false
-                    }).then(() => {
-                        // Redirect if a URL is provided, otherwise default to the Index page
-                        window.location.href = redirectUrl || '@Url.Action("Index", "Idea")';
-                    });
-                } else {
-                    Swal.fire({
-                        icon: type, // 'warning' or 'error'
-                        title: 'Submission Failed',
-                        html: message
-                    });
-                }
-            }
-        });
-    </script>
+    <script src="~/js/pages/idea-create.js" asp-append-version="true"></script>
 }

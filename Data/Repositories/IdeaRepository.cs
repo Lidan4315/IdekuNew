@@ -22,6 +22,19 @@ namespace Ideku.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Idea>> GetAllForValidationAsync()
+        {
+            return await _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Event)
+                .Include(i => i.Initiator)
+                    .ThenInclude(e => e.Divisi)
+                .Include(i => i.Initiator)
+                    .ThenInclude(e => e.Departement)
+                .OrderByDescending(i => i.SubmittedDate)
+                .ToListAsync();
+        }
+
         // 🔥 FIX: Disederhanakan untuk mencari langsung berdasarkan badge number initiator
         public async Task<List<Idea>> GetByInitiatorAsync(string initiatorBadgeNumber)
         {

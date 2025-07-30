@@ -24,13 +24,5 @@ namespace Ideku.Data.Repositories
                 .FirstOrDefaultAsync(u => u.Username == username);
         }
 
-        public async Task<Employee?> GetEmployeeByBadgeAsync(string badgeNumber)
-        {
-            return await _context.Employees
-                .Include(e => e.Departement)
-                    .ThenInclude(d => d.Divisi)
-                .Include(e => e.Divisi)
-                .FirstOrDefaultAsync(e => e.Id == badgeNumber);
-        }
     }
 }

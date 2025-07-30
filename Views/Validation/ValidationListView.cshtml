@@ -18,9 +18,6 @@
             <h1 class="h3 mb-0">Ideas Pending Validation</h1>
             <p class="text-muted">Review and validate submitted ideas</p>
         </div>
-        <div>
-            <span class="badge bg-primary fs-6">Welcome, @Model.ValidatorName</span>
-        </div>
     </div>
 </div>
 
@@ -152,66 +149,5 @@
 
 @section Scripts {
     @Html.AntiForgeryToken()
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const deleteButtons = document.querySelectorAll('.delete-idea-btn');
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-            deleteButtons.forEach(button => {
-                button.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const ideaId = this.getAttribute('data-id');
-                    const row = this.closest('tr');
-
-                    Swal.fire({
-                        title: 'Apakah Anda yakin?',
-                        text: "Anda tidak akan dapat mengembalikan tindakan ini!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Ya, hapus!',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            fetch(`/Validation/Delete/${ideaId}`, {
-                                method: 'POST',
-                                headers: {
-                                    'RequestVerificationToken': token,
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire(
-                                        'Dihapus!',
-                                        data.message,
-                                        'success'
-                                    );
-                                    row.remove();
-                                } else {
-                                    Swal.fire(
-                                        'Gagal!',
-                                        data.message,
-                                        'error'
-                                    );
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                Swal.fire(
-                                    'Error!',
-                                    'Terjadi kesalahan saat mencoba menghapus ide.',
-                                    'error'
-                                );
-                            });
-                        }
-                    });
-                });
-            });
-        });
-    </script>
+    <script src="~/js/pages/validation-list.js" asp-append-version="true"></script>
 }
