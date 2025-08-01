@@ -19,5 +19,10 @@ namespace Ideku.Data.Repositories
                 .OrderBy(d => d.NamaDivisi)
                 .ToListAsync();
         }
+
+        public async Task<Divisi?> GetByIdAsync(string id)
+        {
+            return await _context.Divisi.FindAsync(id);
+        }
     }
 }

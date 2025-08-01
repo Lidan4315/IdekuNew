@@ -1,0 +1,82 @@
+@model IEnumerable<Ideku.Models.ViewModels.Validation.ValidationIdeaViewModel>
+
+@if (Model.Any())
+{
+    foreach (var item in Model)
+    {
+        <tr style="cursor: pointer;" onclick="window.location='@Url.Action("Review", "Validation", new { id = item.Id })'">
+            <td><span class="badge bg-light text-dark">#@item.Id</span></td>
+            <td>
+                <div class="truncate-title" title="@item.IdeaName">
+                    @item.IdeaName
+                </div>
+            </td>
+            <td class="no-wrap">
+                <div class="submitter-info">
+                    <strong>@item.InitiatorName</strong>
+                </div>
+            </td>
+            <td>
+                <div><strong>@item.DivisionName</strong></div>
+            </td>
+            <td>
+                <small class="text-muted">@item.DepartmentName</small>
+            </td>
+            <td>
+                @if (!string.IsNullOrEmpty(item.CategoryName))
+                {
+                    <span class="badge bg-info">@item.CategoryName</span>
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
+            <td>
+                <span class="badge bg-secondary">S@(item.CurrentStage ?? 0)</span>
+            </td>
+            <td>
+                @if (item.CurrentStatus == "Rejected")
+                {
+                    <span class="text-danger">S@(item.CurrentStage ?? 0) Rejected</span>
+                }
+                else if (item.CurrentStatus == "Approved")
+                {
+                    <span class="text-success">S@(item.CurrentStage) Approve</span>
+                }
+                else
+                {
+                    <span class="text-muted">Waiting Approve</span>
+                }
+            </td>
+            <td>
+                @if (item.SavingCost.HasValue)
+                {
+                    <span class="fw-bold text-success">@item.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</span>
+                }
+                else
+                {
+                    <span class="text-muted">-</span>
+                }
+            </td>
+            <td>
+                @{
+                    var statusClass = item.CurrentStatus switch
+                    {
+                        "Submitted" => "bg-primary",
+                        "Under Review" => "bg-warning",
+                        _ => "bg-secondary"
+                    };
+                }
+                <span class="badge @statusClass">@(item.CurrentStatus ?? "Submitted")</span>
+            </td>
+            <td>
+                <div>@item.SubmittedDate.ToString("MMM dd")</div>
+                <small class="text-muted">@item.SubmittedDate.ToString("HH:mm")</small>
+            </td>
+            <td>
+                <button class="btn btn-danger btn-sm delete-idea-btn" data-id="@item.Id" onclick="event.stopPropagation();"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>
+    }
+}

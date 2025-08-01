@@ -383,26 +383,18 @@ namespace Ideku.Controllers
         [HttpGet]
         public async Task<IActionResult> DownloadAll(int ideaId)
         {
+            var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId);
+            if (!hasAccess)
+            {
+                return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
+            }
+            if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile))
+            {
+                return NotFound();
+            }
+
             try
             {
-                var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
-                if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile))
-                {
-                    return NotFound();
-                }
-
-                var currentUserBadge = User.Identity?.Name ?? "";
-                var user = await _authService.AuthenticateAsync(currentUserBadge);
-
-                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
-                bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
-
-                bool hasAccess = idea.InitiatorId == currentUserBadge || isValidator;
-
-                if (!hasAccess)
-                {
-                    return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
-                }
 
                 var stageString = $"S{idea.CurrentStage}";
                 var zipFileName = $"{idea.InitiatorId}_{stageString}.zip";
@@ -436,35 +428,18 @@ namespace Ideku.Controllers
         [HttpGet]
         public async Task<IActionResult> Download(string filename, int ideaId)
         {
+            var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId, filename);
+            if (!hasAccess)
+            {
+                return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
+            }
+            if (idea == null)
+            {
+                return NotFound();
+            }
+
             try
             {
-                if (string.IsNullOrEmpty(filename))
-                {
-                    return NotFound();
-                }
-
-                // Verify user has access to this idea
-                var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
-                if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile) || !idea.AttachmentFile.Split(';').Contains(filename))
-                {
-                    return NotFound();
-                }
-
-                var currentUserBadge = User.Identity?.Name ?? "";
-                var user = await _authService.AuthenticateAsync(currentUserBadge); // Authenticate to get User object with Role
-
-                // Periksa izin: pengguna adalah pemilik, validator, manajer, atau superadmin
-                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
-                bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
-
-                bool hasAccess = idea.InitiatorId == currentUserBadge ||
-                                 isValidator;
-
-                if (!hasAccess)
-                {
-                    // Alihkan ke halaman Access Denied dengan URL kembali
-                    return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
-                }
 
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", filename);
                 if (!System.IO.File.Exists(filePath))
@@ -490,32 +465,18 @@ namespace Ideku.Controllers
         [HttpGet]
         public async Task<IActionResult> ViewAttachment(string filename, int ideaId)
         {
+            var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId, filename);
+            if (!hasAccess)
+            {
+                return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
+            }
+            if (idea == null)
+            {
+                return NotFound();
+            }
+
             try
             {
-                if (string.IsNullOrEmpty(filename))
-                {
-                    return NotFound();
-                }
-
-                // Verify user has access to this idea (same logic as Download)
-                var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
-                if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile) || !idea.AttachmentFile.Split(';').Contains(filename))
-                {
-                    return NotFound();
-                }
-
-                var currentUserBadge = User.Identity?.Name ?? "";
-                var user = await _authService.AuthenticateAsync(currentUserBadge);
-
-                var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
-                bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
-
-                bool hasAccess = idea.InitiatorId == currentUserBadge || isValidator;
-
-                if (!hasAccess)
-                {
-                    return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
-                }
 
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", filename);
                 if (!System.IO.File.Exists(filePath))
@@ -539,6 +500,33 @@ namespace Ideku.Controllers
                 TempData["ErrorMessage"] = "Unable to view file.";
                 return RedirectToAction("Index");
             }
+        }
+
+        private async Task<(Idea idea, bool hasAccess)> CheckFileAccessPermissionAsync(int ideaId, string? requiredFilename = null)
+        {
+            var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
+            if (idea == null)
+            {
+                return (null, false);
+            }
+
+            if (requiredFilename != null)
+            {
+                if (string.IsNullOrEmpty(idea.AttachmentFile) || !idea.AttachmentFile.Split(';').Contains(requiredFilename))
+                {
+                    return (null, false); // Return false if the specific file isn't part of the idea
+                }
+            }
+
+            var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+            var user = await _authService.AuthenticateAsync(currentUserBadge);
+
+            var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
+            bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
+
+            bool hasAccess = idea.InitiatorId == currentUserBadge || isValidator;
+
+            return (idea, hasAccess);
         }
 
         private async Task PopulateDropdownsAsync()

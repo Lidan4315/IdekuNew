@@ -34,20 +34,4 @@ namespace Ideku.Models.ViewModels.Validation
         public string? InformationRequest { get; set; }
     }
 
-    public class ValidationListViewModel
-    {
-        public List<Ideku.Models.Entities.Idea> PendingIdeas { get; set; } = new();
-        public string ValidatorName { get; set; } = string.Empty;
-        public int TotalPending => PendingIdeas.Count;
-        public int SubmittedCount => PendingIdeas.Count(i => i.CurrentStatus == "Submitted");
-        public int UnderReviewCount => PendingIdeas.Count(i => i.CurrentStatus == "Under Review");
-    }
-
-    public class ValidationActionViewModel
-    {
-        public int IdeaId { get; set; }
-        public string Action { get; set; } = string.Empty; // "approve", "reject", "more_info"
-        public string? Comments { get; set; }
-        public decimal? ValidatedSavingCost { get; set; }
-    }
 }
