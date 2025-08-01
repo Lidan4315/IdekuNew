@@ -26,5 +26,10 @@ namespace Ideku.Data.Repositories
                 .OrderBy(d => d.NamaDepartement)
                 .ToListAsync();
         }
+
+        public async Task<Departement?> GetByIdAsync(string id)
+        {
+            return await _context.Departement.FindAsync(id);
+        }
     }
 }

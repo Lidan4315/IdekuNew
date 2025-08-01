@@ -41,5 +41,15 @@ namespace Ideku.Services
         {
             return await _eventRepository.GetAllAsync();
         }
+
+        public async Task<Divisi?> GetDivisionByIdAsync(string id)
+        {
+            return await _divisionRepository.GetByIdAsync(id);
+        }
+
+        public async Task<Departement?> GetDepartmentByIdAsync(string id)
+        {
+            return await _departmentRepository.GetByIdAsync(id);
+        }
     }
 }

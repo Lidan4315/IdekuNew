@@ -4,11 +4,91 @@
 }
 
 <style>
-    .truncate-title {
-        max-width: 350px;
+    body {
+        background-color: #f4f7fc; /* Light gray background from reference */
+    }
+
+    .page-header h1 {
+        font-weight: 600;
+    }
+
+    /* Apply modern card styling to all cards on the page */
+    .card {
+        border: none; /* Remove default border */
+        border-radius: 0.75rem; /* Softer corners */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Subtle shadow */
+    }
+
+    .filter-card .form-control,
+    .filter-card .form-select {
+        font-size: 0.875rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        padding-right: 2.25rem; /* Add padding to prevent text from overlapping the dropdown arrow */
+    }
+    
+    .table-card .card-body {
+        padding: 0; /* Remove padding to let table fit edge-to-edge */
+    }
+
+    .table {
+        margin-bottom: 0; /* Remove default bottom margin */
+    }
+
+    .table thead th {
+        background-color: #f8f9fa; /* Light header for contrast */
+        border-bottom-width: 1px;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem;
+    }
+    
+    .table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f1f3f5;
+    }
+
+    .truncate-title {
+        max-width: 350px; /* Adjust width as needed */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* --- Modern Pagination Styles --- */
+    .pagination-modern .page-item .page-link {
+        border: none;
+        border-radius: 50%; /* Circular buttons */
+        margin: 0 3px;
+        color: #495057;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .pagination-modern .page-item .page-link:hover {
+        background-color: #e9ecef;
+        color: #0d6efd;
+    }
+
+    .pagination-modern .page-item.active .page-link {
+        background-color: transparent;
+        color: #6ea8fe; /* Lighter blue */
+        border: 1px solid #6ea8fe;
+    }
+
+    .pagination-modern .page-item.disabled .page-link {
+        color: #adb5bd;
+        background-color: transparent;
+    }
+
+    .pagination-modern .page-item:first-child .page-link,
+    .pagination-modern .page-item:last-child .page-link {
+        border-radius: 15px; /* Rounded rectangle for First/Last */
     }
 </style>
 
@@ -21,21 +101,58 @@
     </div>
 </div>
 
-
-<!-- Ideas Table -->
-<div class="card">
+<!-- Filter Card -->
+<div class="card filter-card mb-4">
     <div class="card-body">
-        @if (Model.PendingIdeas.Any())
-        {
-            <div class="table-responsive">
+        <form asp-action="List" method="get">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-3">
+                    <input type="text" id="searchString" name="searchString" class="form-control" placeholder="Search by Id, Title, Initiator..." value="@Model.SearchString">
+                </div>
+                <div class="col-lg">
+                    <select id="selectedDivision" name="selectedDivision" asp-for="SelectedDivision" asp-items="@Model.Divisions" class="form-select">
+                        <option value="">All Divisions</option>
+                    </select>
+                </div>
+                <div class="col-lg">
+                    <select id="selectedDepartment" name="selectedDepartment" asp-for="SelectedDepartment" asp-items="@Model.Departments" class="form-select">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="col-lg">
+                    <select id="selectedStatus" name="selectedStatus" asp-for="SelectedStatus" asp-items="@Model.Statuses" class="form-select">
+                        <option value="">All Statuses</option>
+                    </select>
+                </div>
+                <div class="col-lg">
+                    <select id="selectedStage" name="selectedStage" asp-for="SelectedStage" asp-items="@Model.Stages" class="form-select">
+                        <option value="">All Stages</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <a asp-action="List" class="btn btn-outline-secondary" title="Reset Filters">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Ideas Table Card -->
+<div class="card table-card">
+    <div class="card-body">
+        <div id="idea-table-container" class="table-responsive">
+            @if (Model.PendingIdeas.Any())
+            {
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Idea ID</th>
-                            <th>Idea Title</th>
-                            <th>Implementator</th>
-                            <th>Division</th>
-                            <th>Department</th>
+                            <th style="min-width: 380px;">Idea Title</th>
+                            <th style="min-width: 150px;">Initiator</th>
+                            <th style="min-width: 250px;">Division</th>
+                            <th style="min-width: 200px;">Department</th>
                             <th>Category</th>
                             <th>Stage</th>
                             <th>Activity Status</th>
@@ -45,105 +162,35 @@
                             <th>Delete</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach (var idea in Model.PendingIdeas)
-                        {
-                            <tr style="cursor: pointer;" onclick="window.location='@Url.Action("Review", "Validation", new { id = idea.Id })'">
-                                <td><span class="badge bg-light text-dark">#@idea.Id</span></td>
-                                <td>
-                                    <div class="truncate-title" title="@idea.IdeaName">
-                                        @idea.IdeaName
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="submitter-info">
-                                        <strong>@idea.Initiator?.Name</strong>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if (idea.Initiator?.Divisi != null)
-                                    {
-                                        <div><strong>@idea.Initiator.Divisi.NamaDivisi</strong></div>
-                                    }
-                                </td>
-                                <td>
-                                    @if (idea.Initiator?.Departement != null)
-                                    {
-                                        <small class="text-muted">@idea.Initiator.Departement.NamaDepartement</small>
-                                    }
-                                </td>
-                                <td>
-                                    @if (idea.Category != null)
-                                    {
-                                        <span class="badge bg-info">@idea.Category.NamaCategory</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">-</span>
-                                    }
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary">S@(idea.CurrentStage ?? 0)</span>
-                                </td>
-                                <td>
-                                    @if (idea.CurrentStatus == "Rejected")
-                                    {
-                                        <span class="text-danger">S@(idea.CurrentStage ?? 0) Rejected</span>
-                                    }
-                                    else if (idea.CurrentStatus == "Approved")
-                                    {
-                                        <span class="text-success">S@(idea.CurrentStage) Approve</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Waiting Approve</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (idea.SavingCost.HasValue)
-                                    {
-                                        <span class="fw-bold text-success">@idea.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">-</span>
-                                    }
-                                </td>
-                                <td>
-                                    @{
-                                        var statusClass = idea.CurrentStatus switch
-                                        {
-                                            "Submitted" => "bg-primary",
-                                            "Under Review" => "bg-warning",
-                                            _ => "bg-secondary"
-                                        };
-                                    }
-                                    <span class="badge @statusClass">@(idea.CurrentStatus ?? "Submitted")</span>
-                                </td>
-                                <td>
-                                    <div>@idea.SubmittedDate.ToString("MMM dd")</div>
-                                    <small class="text-muted">@idea.SubmittedDate.ToString("HH:mm")</small>
-                                </td>
-                                <td>
-                                    <button class="btn btn-danger btn-sm delete-idea-btn" data-id="@idea.Id" onclick="event.stopPropagation();"><i class="bi bi-trash"></i></button>
-                                </td>
-                            </tr>
-                        }
+                    <tbody id="idea-table-body">
+                        @await Html.PartialAsync("_IdeaListPartial", Model.PendingIdeas)
                     </tbody>
                 </table>
+            }
+            else
+            {
+                <div class="empty-state text-center py-5">
+                    <i class="bi bi-search display-1 text-muted"></i>
+                    <h4 class="mt-3">No Ideas Found</h4>
+                    <p class="text-muted">No ideas match your current filter criteria. Try adjusting your filters.</p>
+                    <a asp-action="List" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reset All Filters
+                    </a>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="card-footer d-flex justify-content-end" id="pagination-container">
+            @await Html.PartialAsync("_PaginationPartial", Model)
+        </div>
+        
+        <div id="table-loading-spinner" class="text-center py-5" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
-        }
-        else
-        {
-            <div class="empty-state text-center py-5">
-                <i class="bi bi-check-circle display-1 text-success"></i>
-                <h4 class="mt-3">All Caught Up!</h4>
-                <p class="text-muted">There are no ideas pending validation at this time.</p>
-                <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
-                    <i class="bi bi-house me-2"></i>Back to Dashboard
-                </a>
-            </div>
-        }
+            <p class="mt-2">Filtering ideas...</p>
+        </div>
     </div>
 </div>
 
