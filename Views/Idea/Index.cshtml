@@ -91,9 +91,9 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (idea.SavingCost.HasValue)
+                                    @if (idea.SavingCost > 0)
                                     {
-                                        <span class="fw-bold text-success">@idea.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</span>
+                                        <span class="fw-bold text-success">@idea.SavingCost.ToString("C", new System.Globalization.CultureInfo("en-US"))</span>
                                     }
                                     else
                                     {
@@ -102,7 +102,7 @@
                                 </td>
                                 <td>
                                     @{
-                                        var statusClass = idea.CurrentStatus switch
+                                        var statusClass = idea.Status switch
                                         {
                                             "Submitted" => "bg-primary",
                                             "Under Review" => "bg-warning",
@@ -111,7 +111,7 @@
                                             _ => "bg-secondary"
                                         };
                                     }
-                                    <span class="badge @statusClass">@(idea.CurrentStatus ?? "Submitted")</span>
+                                    <span class="badge @statusClass">@(idea.Status)</span>
                                 </td>
                                 <td>
                                     <small>@idea.SubmittedDate.ToString("MMM dd, yyyy")</small>
@@ -121,7 +121,7 @@
                                         <a asp-action="Details" asp-route-id="@idea.Id" class="btn btn-outline-primary" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        @if (idea.CurrentStatus == "Submitted")
+                                        @if (idea.Status == "Submitted")
                                         {
                                             <a asp-action="Edit" asp-route-id="@idea.Id" class="btn btn-outline-secondary" title="Edit">
                                                 <i class="bi bi-pencil"></i>

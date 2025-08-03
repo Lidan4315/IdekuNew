@@ -21,6 +21,7 @@ namespace Ideku.Controllers
         private readonly AppDbContext _context;
         private readonly EmailSettings _emailSettings;
         private readonly ILogger<IdeaController> _logger;
+        private readonly ApproverService _approverService;
 
         public IdeaController(
             IdeaService ideaService,
@@ -30,7 +31,8 @@ namespace Ideku.Controllers
             OrganizationService organizationService,
             AppDbContext context,
             IOptions<EmailSettings> emailSettings,
-            ILogger<IdeaController> logger)
+            ILogger<IdeaController> logger,
+            ApproverService approverService)
         {
             _ideaService = ideaService;
             _authService = authService;
@@ -40,6 +42,7 @@ namespace Ideku.Controllers
             _context = context;
             _emailSettings = emailSettings.Value;
             _logger = logger;
+            _approverService = approverService;
         }
 
         // 🔥 NEW: API endpoint untuk mendapatkan departements berdasarkan division
@@ -218,18 +221,27 @@ namespace Ideku.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Check if user owns this idea or is a validator/admin
-                var currentUserBadge = User.Identity?.Name ?? "";
-                var user = await _authService.AuthenticateAsync(currentUserBadge); // Authenticate to get User object with Role
-
-                bool hasAccess = idea.InitiatorId == currentUserBadge ||
-                                 (user?.Role != null && (user.Role.RoleName == "Manager" || user.Role.RoleName == "SuperAdmin"));
-
-                if (!hasAccess)
+                var currentUser = await _authService.AuthenticateAsync(User.Identity.Name);
+                if (currentUser == null)
                 {
-                    TempData["ErrorMessage"] = "You don't have permission to view this idea.";
+                    return Forbid();
+                }
+
+                // General access check
+                bool isInitiator = idea.InitiatorId == currentUser.EmployeeId;
+                bool isSuperuser = currentUser.Role.RoleName == "Superuser";
+                // TODO: Add a more robust check for any approver in the chain
+                bool isApprover = true; 
+
+                if (!isInitiator && !isSuperuser && !isApprover)
+                {
+                     TempData["ErrorMessage"] = "You don't have permission to view this idea.";
                     return RedirectToAction("Index");
                 }
+
+                // Specific permission for managing milestones
+                var workstreamLeader = await _approverService.GetWorkstreamLeaderAsync(idea.TargetDivisionId, idea.TargetDepartmentId);
+                ViewBag.CanManageMilestones = (currentUser.EmployeeId == workstreamLeader?.Id || isSuperuser);
 
                 return View(idea);
             }
@@ -255,15 +267,15 @@ namespace Ideku.Controllers
                 }
 
                 // Check permissions
-                var currentUser = User.Identity?.Name ?? "";
-                if (idea.InitiatorId != currentUser)
+                var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+                if (idea.InitiatorId != currentUserBadge)
                 {
                     TempData["ErrorMessage"] = "You don't have permission to edit this idea.";
                     return RedirectToAction("Index");
                 }
 
                 // Only allow edit if status is Submitted
-                if (idea.CurrentStatus != "Submitted")
+                if (idea.Status != "Submitted")
                 {
                     TempData["ErrorMessage"] = "You can only edit ideas that haven't been reviewed yet.";
                     return RedirectToAction("Details", new { id = id });
@@ -273,21 +285,21 @@ namespace Ideku.Controllers
                 var viewModel = new IdeaCreateViewModel
                 {
                     BadgeNumber = idea.InitiatorId,
-                    ToDivision = idea.Division,
-                    ToDepartment = idea.Department,
-                    Category = idea.CategoryId.GetValueOrDefault(),
+                    ToDivision = idea.TargetDivisionId,
+                    ToDepartment = idea.TargetDepartmentId,
+                    Category = idea.CategoryId,
                     Event = idea.EventId,
                     IdeaName = idea.IdeaName,
-                    IdeaIssueBackground = idea.IdeaIssueBackground,
-                    IdeaSolution = idea.IdeaSolution,
-                    SavingCost = idea.SavingCost.GetValueOrDefault()
+                    IdeaIssueBackground = idea.IssueBackground,
+                    IdeaSolution = idea.Solution,
+                    SavingCost = idea.SavingCost
                 };
 
                 await PopulateDropdownsAsync();
 
                 ViewBag.IsEdit = true;
                 ViewBag.IdeaId = id;
-                ViewBag.CurrentAttachment = idea.AttachmentFile;
+                ViewBag.CurrentAttachment = idea.AttachmentFiles;
 
                 return View("Create", viewModel);
             }
@@ -312,8 +324,8 @@ namespace Ideku.Controllers
                     return Json(new { success = false, message = "Please correct the validation errors.", errors = modelErrors });
                 }
 
-                var currentUser = User.Identity?.Name ?? "";
-                var (success, serviceErrors) = await _ideaService.UpdateIdeaFromViewModelAsync(id, model, currentUser);
+                var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+                var (success, serviceErrors) = await _ideaService.UpdateIdeaFromViewModelAsync(id, model, currentUserBadge);
 
                 if (success)
                 {
@@ -346,24 +358,24 @@ namespace Ideku.Controllers
                 }
 
                 // Check permissions
-                var currentUser = User.Identity?.Name ?? "";
-                if (idea.InitiatorId != currentUser)
+                var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+                if (idea.InitiatorId != currentUserBadge)
                 {
                     TempData["ErrorMessage"] = "You don't have permission to delete this idea.";
                     return RedirectToAction("Index");
                 }
 
                 // Only allow delete if status is Submitted
-                if (idea.CurrentStatus != "Submitted")
+                if (idea.Status != "Submitted")
                 {
                     TempData["ErrorMessage"] = "You can only delete ideas that haven't been reviewed yet.";
                     return RedirectToAction("Index");
                 }
 
                 // Delete attached file if exists
-                if (!string.IsNullOrEmpty(idea.AttachmentFile))
+                if (!string.IsNullOrEmpty(idea.AttachmentFiles))
                 {
-                    _fileService.DeleteFile(idea.AttachmentFile);
+                    _fileService.DeleteFile(idea.AttachmentFiles);
                 }
 
                 await _ideaService.DeleteIdeaAsync(id);
@@ -388,7 +400,7 @@ namespace Ideku.Controllers
             {
                 return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
             }
-            if (idea == null || string.IsNullOrEmpty(idea.AttachmentFile))
+            if (idea == null || string.IsNullOrEmpty(idea.AttachmentFiles))
             {
                 return NotFound();
             }
@@ -402,7 +414,7 @@ namespace Ideku.Controllers
                 {
                     using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
                     {
-                        foreach (var file in idea.AttachmentFile.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                        foreach (var file in idea.AttachmentFiles.Split(';', StringSplitOptions.RemoveEmptyEntries))
                         {
                             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", file);
                             if (System.IO.File.Exists(filePath))
@@ -429,18 +441,13 @@ namespace Ideku.Controllers
         public async Task<IActionResult> Download(string filename, int ideaId)
         {
             var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId, filename);
-            if (!hasAccess)
+            if (!hasAccess || idea == null)
             {
                 return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
-            }
-            if (idea == null)
-            {
-                return NotFound();
             }
 
             try
             {
-
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", filename);
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -466,18 +473,13 @@ namespace Ideku.Controllers
         public async Task<IActionResult> ViewAttachment(string filename, int ideaId)
         {
             var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId, filename);
-            if (!hasAccess)
+            if (!hasAccess || idea == null)
             {
                 return RedirectToAction("AccessDenied", "Account", new { ReturnUrl = Request.Path });
-            }
-            if (idea == null)
-            {
-                return NotFound();
             }
 
             try
             {
-
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", filename);
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -502,7 +504,7 @@ namespace Ideku.Controllers
             }
         }
 
-        private async Task<(Idea idea, bool hasAccess)> CheckFileAccessPermissionAsync(int ideaId, string? requiredFilename = null)
+        private async Task<(Idea? idea, bool hasAccess)> CheckFileAccessPermissionAsync(int ideaId, string? requiredFilename = null)
         {
             var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
             if (idea == null)
@@ -510,23 +512,30 @@ namespace Ideku.Controllers
                 return (null, false);
             }
 
-            if (requiredFilename != null)
+            if (requiredFilename != null && (string.IsNullOrEmpty(idea.AttachmentFiles) || !idea.AttachmentFiles.Split(';').Contains(requiredFilename)))
             {
-                if (string.IsNullOrEmpty(idea.AttachmentFile) || !idea.AttachmentFile.Split(';').Contains(requiredFilename))
-                {
-                    return (null, false); // Return false if the specific file isn't part of the idea
-                }
+                return (idea, false);
             }
 
             var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+            if (string.IsNullOrEmpty(currentUserBadge))
+            {
+                return (idea, false);
+            }
+
+            if (idea.InitiatorId == currentUserBadge)
+            {
+                return (idea, true);
+            }
+
             var user = await _authService.AuthenticateAsync(currentUserBadge);
-
             var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
-            bool isValidator = user?.Role != null && allowedRoles.Contains(user.Role.Id);
+            if (user?.Role != null && allowedRoles.Contains(user.Role.Id))
+            {
+                return (idea, true);
+            }
 
-            bool hasAccess = idea.InitiatorId == currentUserBadge || isValidator;
-
-            return (idea, hasAccess);
+            return (idea, false);
         }
 
         private async Task PopulateDropdownsAsync()

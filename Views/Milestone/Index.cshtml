@@ -1,0 +1,81 @@
+@model Ideku.Models.ViewModels.Milestone.MilestoneIndexViewModel
+
+@{
+    ViewData["Title"] = "Milestones & Monitoring";
+}
+
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-0">Milestones & Monitoring</h1>
+            <p class="text-muted">Track and update the progress of idea: @Model.Idea.IdeaName</p>
+        </div>
+        <div>
+            <a asp-controller="Idea" asp-action="Details" asp-route-id="@Model.IdeaId" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Idea Details
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Milestones Section -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-flag me-2"></i>Milestones</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Milestones.Any())
+                {
+                    <ul class="list-group">
+                        @foreach (var milestone in Model.Milestones)
+                        {
+                            <li class="list-group-item">
+                                <strong>@milestone.MilestoneTitle</strong><br/>
+                                <small class="text-muted">Status: @milestone.Status | Created: @milestone.CreatedDate.ToShortDateString()</small>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted">No milestones have been added yet.</p>
+                }
+            </div>
+            <div class="card-footer">
+                <h6>Add New Milestone</h6>
+                <form asp-action="CreateMilestone" method="post">
+                    <input type="hidden" name="ideaId" value="@Model.IdeaId" />
+                    <div class="mb-3">
+                        <textarea name="milestoneText" class="form-control" rows="3" placeholder="Enter milestone description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Milestone</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saving Monitoring Section -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Saving Monitoring</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="UpdateMonitoring" method="post">
+                    <input type="hidden" name="ideaId" value="@Model.IdeaId" />
+                    <div class="mb-3">
+                        <label class="form-label">Planned Saving</label>
+                        <input type="number" name="plannedSaving" class="form-control" value="@Model.SavingMonitoring.PlannedSaving" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actual Saving</label>
+                        <input type="number" name="actualSaving" class="form-control" value="@Model.SavingMonitoring.ActualSaving" />
+                    </div>
+                    <button type="submit" class="btn btn-success">Update Monitoring</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,8 @@
+using Ideku.Data.Context;
 using Ideku.Data.Repositories;
 using Ideku.Models.Entities;
 using Ideku.Models.ViewModels.Idea;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Ideku.Services
@@ -13,6 +15,9 @@ namespace Ideku.Services
         private readonly AuthService _authService;
         private readonly EmailSettings _emailSettings;
         private readonly ILogger<IdeaService> _logger;
+        private readonly IdeaCodeService _ideaCodeService;
+        private readonly AppDbContext _context;
+        private readonly WorkflowService _workflowService;
 
         public IdeaService(
             IdeaRepository ideaRepository,
@@ -20,7 +25,10 @@ namespace Ideku.Services
             EmailService emailService,
             AuthService authService,
             IOptions<EmailSettings> emailSettings,
-            ILogger<IdeaService> logger)
+            ILogger<IdeaService> logger,
+            IdeaCodeService ideaCodeService,
+            AppDbContext context,
+            WorkflowService workflowService)
         {
             _ideaRepository = ideaRepository;
             _fileService = fileService;
@@ -28,6 +36,9 @@ namespace Ideku.Services
             _authService = authService;
             _emailSettings = emailSettings.Value;
             _logger = logger;
+            _ideaCodeService = ideaCodeService;
+            _context = context;
+            _workflowService = workflowService;
         }
 
         public async Task<List<Idea>> GetAllIdeasAsync()
@@ -52,11 +63,7 @@ namespace Ideku.Services
 
         public async Task<Idea> CreateIdeaAsync(Idea idea)
         {
-            // Set default values
-            idea.SubmittedDate = DateTime.UtcNow;
-            idea.CurrentStage = 0; // 🔥 FIX: Mengubah stage awal menjadi 0
-            idea.CurrentStatus = "Submitted";
-
+            // Values are now set in AppDbContext SaveChangesAsync
             return await _ideaRepository.CreateAsync(idea);
         }
 
@@ -75,8 +82,8 @@ namespace Ideku.Services
         {
             var ideas = await GetUserIdeasAsync(initiator);
             var total = ideas.Count;
-            var pending = ideas.Count(i => i.CurrentStatus == "Submitted" || i.CurrentStatus == "Under Review");
-            var approved = ideas.Count(i => i.CurrentStatus == "Approved");
+            var pending = ideas.Count(i => i.Status == "Submitted" || i.Status == "Under Review");
+            var approved = ideas.Count(i => i.Status == "Approved");
 
             return (total, pending, approved);
         }
@@ -86,8 +93,8 @@ namespace Ideku.Services
         {
             var allIdeas = await GetAllIdeasAsync();
             var total = allIdeas.Count;
-            var pending = allIdeas.Count(i => i.CurrentStatus == "Submitted" || i.CurrentStatus == "Under Review");
-            var approved = allIdeas.Count(i => i.CurrentStatus == "Approved");
+            var pending = allIdeas.Count(i => i.Status == "Submitted" || i.Status == "Under Review");
+            var approved = allIdeas.Count(i => i.Status == "Approved");
 
             return (total, pending, approved);
         }
@@ -133,51 +140,37 @@ namespace Ideku.Services
 
             var idea = new Idea
             {
-                AttachmentFile = attachmentFileNames.Any() ? string.Join(";", attachmentFileNames) : null,
+                AttachmentFiles = attachmentFileNames.Any() ? string.Join(";", attachmentFileNames) : null,
                 InitiatorId = model.BadgeNumber,
-                Division = model.ToDivision,
-                Department = model.ToDepartment,
+                TargetDivisionId = model.ToDivision,
+                TargetDepartmentId = model.ToDepartment,
                 CategoryId = model.Category,
                 EventId = model.Event,
                 IdeaName = model.IdeaName,
-                IdeaIssueBackground = model.IdeaIssueBackground,
-                IdeaSolution = model.IdeaSolution,
+                IssueBackground = model.IdeaIssueBackground,
+                Solution = model.IdeaSolution,
                 SavingCost = model.SavingCost,
+                Status = "Under Review",
+                CurrentStage = 0,
+                IdeaCode = await _ideaCodeService.GenerateNextIdeaCodeAsync()
             };
 
-            var createdIdea = await CreateIdeaAsync(idea);
-            createdIdea.CurrentStatus = "Under Review";
-            await UpdateIdeaAsync(createdIdea);
-
-            _ = Task.Run(async () =>
+            var threshold = await GetHighValueThresholdAsync();
+            if (idea.SavingCost >= threshold)
             {
-                try
-                {
-                    if (_emailSettings.ValidatorEmails?.Any() == true)
-                    {
-                        var submitterName = employee?.Name ?? model.BadgeNumber;
-                        var emailSent = await _emailService.SendIdeaSubmissionNotificationAsync(
-                            createdIdea.IdeaName, submitterName, model.BadgeNumber, createdIdea.Id, _emailSettings.ValidatorEmails);
+                idea.WorkflowType = "HIGH_VALUE";
+                idea.MaxStage = 6;
+            }
+            else
+            {
+                idea.WorkflowType = "STANDARD";
+                idea.MaxStage = 3;
+            }
 
-                        if (emailSent)
-                        {
-                            _logger.LogInformation("BACKGROUND JOB: Validation emails sent for idea {IdeaId}", createdIdea.Id);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("BACKGROUND JOB: Failed to send validation emails for idea {IdeaId}", createdIdea.Id);
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning("BACKGROUND JOB: No validator emails configured.");
-                    }
-                }
-                catch (Exception emailEx)
-                {
-                    _logger.LogError(emailEx, "BACKGROUND JOB: Error sending validation emails for idea {IdeaId}", createdIdea.Id);
-                }
-            });
+            var createdIdea = await CreateIdeaAsync(idea);
+
+            // Initiate the workflow to send the first notification
+            await _workflowService.InitiateWorkflowAsync(createdIdea);
 
             return (true, createdIdea, errors);
         }
@@ -211,9 +204,9 @@ namespace Ideku.Services
 
             if (model.AttachmentFiles != null && model.AttachmentFiles.Any())
             {
-                if (!string.IsNullOrEmpty(existingIdea.AttachmentFile))
+                if (!string.IsNullOrEmpty(existingIdea.AttachmentFiles))
                 {
-                    foreach (var oldFile in existingIdea.AttachmentFile.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                    foreach (var oldFile in existingIdea.AttachmentFiles.Split(';', StringSplitOptions.RemoveEmptyEntries))
                     {
                         _fileService.DeleteFile(oldFile);
                     }
@@ -229,22 +222,36 @@ namespace Ideku.Services
                         attachmentFileNames.Add(savedFileName);
                     }
                 }
-                existingIdea.AttachmentFile = string.Join(";", attachmentFileNames);
+            existingIdea.AttachmentFiles = string.Join(";", attachmentFileNames);
             }
 
             existingIdea.InitiatorId = model.BadgeNumber;
-            existingIdea.Division = model.ToDivision;
-            existingIdea.Department = model.ToDepartment;
+            existingIdea.TargetDivisionId = model.ToDivision;
+            existingIdea.TargetDepartmentId = model.ToDepartment;
             existingIdea.CategoryId = model.Category;
             existingIdea.EventId = model.Event;
             existingIdea.IdeaName = model.IdeaName;
-            existingIdea.IdeaIssueBackground = model.IdeaIssueBackground;
-            existingIdea.IdeaSolution = model.IdeaSolution;
+            existingIdea.IssueBackground = model.IdeaIssueBackground;
+            existingIdea.Solution = model.IdeaSolution;
             existingIdea.SavingCost = model.SavingCost;
 
             await UpdateIdeaAsync(existingIdea);
 
             return (true, errors);
+        }
+
+        private async Task<decimal> GetHighValueThresholdAsync()
+        {
+            var setting = await _context.SystemSettings
+                .Where(s => s.SettingKey == "HIGH_VALUE_THRESHOLD")
+                .FirstOrDefaultAsync();
+
+            if (setting != null && decimal.TryParse(setting.SettingValue, out decimal threshold))
+            {
+                return threshold;
+            }
+
+            return 20000; // Default threshold
         }
     }
 }

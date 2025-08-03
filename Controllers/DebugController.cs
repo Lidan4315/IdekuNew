@@ -34,7 +34,7 @@ namespace Ideku.Controllers
                         i.IdeaName, 
                         i.InitiatorId, 
                         i.SubmittedDate,
-                        i.CurrentStatus 
+                        i.Status 
                     })
                     .OrderByDescending(i => i.SubmittedDate)
                     .ToListAsync(),
@@ -192,6 +192,50 @@ namespace Ideku.Controllers
                 CurrentUser = currentUser,
                 SqlResults = results
             });
+        }
+
+        // 🔥 NEW: Debug endpoint untuk memeriksa data user, role, dan assignment berdasarkan email
+        [HttpGet]
+        public async Task<IActionResult> CheckUserByEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return BadRequest("Email parameter is required.");
+            }
+
+            var employee = await _context.Employees
+                .Include(e => e.User)
+                    .ThenInclude(u => u.Role)
+                .Include(e => e.Divisi)
+                .Include(e => e.Departement)
+                .FirstOrDefaultAsync(e => e.Email == email);
+
+            if (employee == null)
+            {
+                return NotFound($"No employee found with email: {email}");
+            }
+
+            var result = new
+            {
+                EmployeeInfo = new
+                {
+                    employee.Id,
+                    employee.Name,
+                    employee.Email,
+                    employee.PositionTitle,
+                    employee.EmploymentStatus
+                },
+                AssignedDivision = employee.Divisi != null ? new { employee.Divisi.Id, employee.Divisi.NamaDivisi } : null,
+                AssignedDepartment = employee.Departement != null ? new { employee.Departement.Id, employee.Departement.NamaDepartement } : null,
+                UserInfo = employee.User != null ? (object)new
+                {
+                    employee.User.Username,
+                    employee.User.IsActive,
+                    Role = employee.User.Role != null ? new { employee.User.Role.Id, employee.User.Role.RoleName, employee.User.Role.ApprovalLevel } : null
+                } : "No associated user account."
+            };
+
+            return Json(result);
         }
     }
 }

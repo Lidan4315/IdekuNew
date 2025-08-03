@@ -10,7 +10,7 @@
             <p class="text-muted">View detailed information about your idea</p>
         </div>
         <div>
-            @if (Model.CurrentStatus == "Submitted")
+            @if (Model.Status == "Submitted")
             {
                 <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">
                     <i class="bi bi-pencil me-2"></i>Edit
@@ -19,6 +19,12 @@
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Back to List
             </a>
+            @if (ViewBag.CanManageMilestones == true)
+            {
+                <a asp-controller="Milestone" asp-action="Index" asp-route-id="@Model.Id" class="btn btn-info">
+                    <i class="bi bi-flag me-2"></i>Manage Milestones
+                </a>
+            }
         </div>
     </div>
 </div>
@@ -38,7 +44,7 @@
                     <div class="col-md-6">
                         <strong>Status:</strong>
                         @{
-                            var statusClass = Model.CurrentStatus switch
+                            var statusClass = Model.Status switch
                             {
                                 "Submitted" => "bg-primary",
                                 "Under Review" => "bg-warning",
@@ -47,7 +53,7 @@
                                 _ => "bg-secondary"
                         };
                     }
-                    <span class="badge @statusClass">@(Model.CurrentStatus ?? "Submitted")</span>
+                    <span class="badge @statusClass">@(Model.Status)</span>
                 </div>
             </div>
 
@@ -62,21 +68,21 @@
                 </div>
             </div>
 
-            @if (!string.IsNullOrEmpty(Model.Division) || !string.IsNullOrEmpty(Model.Department))
+            @if (Model.TargetDivision != null || Model.TargetDepartment != null)
             {
                 <div class="row mb-3">
-                    @if (!string.IsNullOrEmpty(Model.Division))
+                    @if (Model.TargetDivision != null)
                     {
                         <div class="col-md-6">
                             <strong>Division:</strong>
-                            <span>@Model.Division</span>
+                            <span>@Model.TargetDivision.NamaDivisi</span>
                         </div>
                     }
-                    @if (!string.IsNullOrEmpty(Model.Department))
+                    @if (Model.TargetDepartment != null)
                     {
                         <div class="col-md-6">
                             <strong>Department:</strong>
-                            <span>@Model.Department</span>
+                            <span>@Model.TargetDepartment.NamaDepartement</span>
                         </div>
                     }
                 </div>
@@ -103,28 +109,28 @@
             }
 
 
-            @if (!string.IsNullOrEmpty(Model.IdeaSolution))
+            @if (!string.IsNullOrEmpty(Model.Solution))
             {
                 <div class="mb-4">
                     <h6><i class="bi bi-gear me-2"></i>Proposed Solution</h6>
-                    <p class="text-muted">@Model.IdeaSolution</p>
+                    <p class="text-muted">@Model.Solution</p>
                 </div>
             }
 
-            @if (Model.SavingCost.HasValue)
+            @if (Model.SavingCost > 0)
             {
                 <div class="mb-4">
                     <h6><i class="bi bi-currency-dollar me-2"></i>Financial Impact</h6>
-                    <p class="fw-bold text-success fs-5">@Model.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</p>
+                    <p class="fw-bold text-success fs-5">@Model.SavingCost.ToString("C", new System.Globalization.CultureInfo("en-US"))</p>
                     <small class="text-muted">Estimated cost savings</small>
                 </div>
             }
 
-            @if (!string.IsNullOrEmpty(Model.AttachmentFile))
+            @if (!string.IsNullOrEmpty(Model.AttachmentFiles))
             {
                 <div class="mb-4">
                     <h6><i class="bi bi-paperclip me-2"></i>Attachment</h6>
-                    <a asp-action="Download" asp-route-filename="@Model.AttachmentFile" asp-route-ideaId="@Model.Id" 
+                    <a asp-action="Download" asp-route-filename="@Model.AttachmentFiles" asp-route-ideaId="@Model.Id" 
                        target="_blank" class="btn btn-outline-primary btn-sm">
                         <i class="bi bi-download me-2"></i>Download Attachment
                     </a>
@@ -149,7 +155,7 @@
                     </div>
                 </div>
                 
-                @if (Model.CurrentStatus == "Under Review" || Model.CurrentStatus == "Approved" || Model.CurrentStatus == "Rejected")
+                @if (Model.Status == "Under Review" || Model.Status == "Approved" || Model.Status == "Rejected")
                 {
                     <div class="timeline-item active">
                         <div class="timeline-marker bg-warning"></div>
@@ -160,7 +166,7 @@
                     </div>
                 }
                 
-                @if (Model.CurrentStatus == "Approved")
+                @if (Model.Status == "Approved")
                 {
                     <div class="timeline-item active">
                         <div class="timeline-marker bg-success"></div>
@@ -170,7 +176,7 @@
                         </div>
                     </div>
                 }
-                else if (Model.CurrentStatus == "Rejected")
+                else if (Model.Status == "Rejected")
                 {
                     <div class="timeline-item active">
                         <div class="timeline-marker bg-danger"></div>

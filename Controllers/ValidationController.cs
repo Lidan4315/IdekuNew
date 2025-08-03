@@ -5,7 +5,6 @@ using Ideku.Services;
 using Ideku.Models.ViewModels.Validation;
 using Ideku.Data.Context;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Linq;
 
 namespace Ideku.Controllers
@@ -14,34 +13,76 @@ namespace Ideku.Controllers
     public class ValidationController : Controller
     {
         private readonly IdeaService _ideaService;
-        private readonly EmailService _emailService;
         private readonly AuthService _authService;
-        private readonly AppDbContext _context;
+        private readonly WorkflowService _workflowService;
         private readonly ILogger<ValidationController> _logger;
 
         public ValidationController(
             IdeaService ideaService,
-            EmailService emailService,
             AuthService authService,
-            AppDbContext context,
+            WorkflowService workflowService,
             ILogger<ValidationController> logger)
         {
             _ideaService = ideaService;
-            _emailService = emailService;
             _authService = authService;
-            _context = context;
+            _workflowService = workflowService;
             _logger = logger;
         }
+
+        // GET: /Validation/List - List all ideas pending validation for the current user
+        [HttpGet]
+        public async Task<IActionResult> List()
+        {
+            try
+            {
+                var (user, isAuthorized) = await CheckValidationPermissionAsync();
+                if (user == null || !isAuthorized)
+                {
+                    TempData["ErrorMessage"] = "You don't have permission to view the validation list.";
+                    return RedirectToAction("Index", "Home");
+                }
+
+                // Get only the ideas pending for this specific user, according to our corrected workflow logic
+                var pendingIdeas = await _workflowService.GetPendingApprovalsForUserAsync(user.EmployeeId);
+
+                var viewModel = new ValidationListViewModel
+                {
+                    PendingIdeas = pendingIdeas.Select(idea => new ValidationIdeaViewModel
+                    {
+                        Id = idea.Id,
+                        IdeaName = idea.IdeaName,
+                        InitiatorName = idea.Initiator?.Name,
+                        DivisionName = idea.TargetDivision?.NamaDivisi,
+                        DepartmentName = idea.TargetDepartment?.NamaDepartement,
+                        CategoryName = idea.Category?.NamaCategory,
+                        CurrentStage = idea.CurrentStage,
+                        CurrentStatus = idea.Status,
+                        SavingCost = idea.SavingCost,
+                        SubmittedDate = idea.SubmittedDate
+                    }).ToList(),
+                    ValidatorName = user.Name
+                };
+
+                return View("ValidationListView", viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading validation list for user {Username}", User.Identity?.Name);
+                TempData["ErrorMessage"] = "Unable to load your validation list.";
+                return RedirectToAction("Index", "Home");
+            }
+        }
+
 
         // GET: /Validation/Review/5 - Review idea for validation
         [HttpGet]
         public async Task<IActionResult> Review(int id)
         {
             var (user, isAuthorized) = await CheckValidationPermissionAsync();
-            if (!isAuthorized)
+            if (user == null || !isAuthorized)
             {
                 TempData["ErrorMessage"] = "You don't have permission to validate ideas.";
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("List");
             }
 
             try
@@ -50,29 +91,36 @@ namespace Ideku.Controllers
                 if (idea == null)
                 {
                     TempData["ErrorMessage"] = "Idea not found.";
-                    return RedirectToAction("Index", "Home");
+                    return RedirectToAction("List");
                 }
 
-                // Get submitter details
+                // Extra check: Does this idea actually appear in the user's pending list?
+                var pendingIdeas = await _workflowService.GetPendingApprovalsForUserAsync(user.EmployeeId);
+                if (!pendingIdeas.Any(p => p.Id == id))
+                {
+                    TempData["ErrorMessage"] = "This idea is not currently awaiting your approval.";
+                    return RedirectToAction("List");
+                }
+
                 var submitter = await _authService.GetEmployeeByBadgeAsync(idea.InitiatorId);
 
                 var viewModel = new ValidationReviewViewModel
                 {
                     IdeaId = idea.Id,
                     IdeaName = idea.IdeaName,
-                    IdeaIssueBackground = idea.IdeaIssueBackground,
-                    IdeaSolution = idea.IdeaSolution,
+                    IdeaIssueBackground = idea.IssueBackground,
+                    IdeaSolution = idea.Solution,
                     SavingCost = idea.SavingCost,
-                    AttachmentFile = idea.AttachmentFile,
+                    AttachmentFile = idea.AttachmentFiles,
                     SubmittedDate = idea.SubmittedDate,
-                    CurrentStatus = idea.CurrentStatus ?? "Submitted",
+                    CurrentStatus = idea.Status,
                     SubmitterName = submitter?.Name ?? "Unknown",
                     SubmitterEmail = submitter?.Email ?? "",
                     SubmitterId = idea.InitiatorId,
                     CategoryName = idea.Category?.NamaCategory,
                     EventName = idea.Event?.NamaEvent,
-                    Division = idea.Division,
-                    Department = idea.Department
+                    Division = idea.TargetDivision?.NamaDivisi,
+                    Department = idea.TargetDepartment?.NamaDepartement
                 };
 
                 return View("ValidationReviewView", viewModel);
@@ -81,7 +129,7 @@ namespace Ideku.Controllers
             {
                 _logger.LogError(ex, $"Error loading validation review for idea {id}");
                 TempData["ErrorMessage"] = "Unable to load idea for validation.";
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("List");
             }
         }
 
@@ -92,45 +140,24 @@ namespace Ideku.Controllers
         {
             try
             {
-                var idea = await _ideaService.GetIdeaByIdAsync(id);
-                if (idea == null)
+                var currentUser = await _authService.AuthenticateAsync(User.Identity!.Name!);
+                if (currentUser?.EmployeeId == null)
                 {
-                    return Json(new { success = false, message = "Idea not found." });
+                    return Json(new { success = false, message = "User not authenticated or not linked to an employee." });
                 }
 
-                // Update idea status
-                idea.CurrentStatus = "Approved";
-                idea.UpdatedDate = DateTime.UtcNow;
-                idea.CurrentStage = 1; // Set stage to S1 on approval
-                
-                if (validatedSavingCost.HasValue)
+                var success = await _workflowService.AdvanceStageAsync(id, currentUser.EmployeeId, comments, validatedSavingCost);
+
+                if (success)
                 {
-                    idea.SavingCostValidated = validatedSavingCost;
-                    idea.SavingCostOptionValidated = "Validated";
+                    _logger.LogInformation($"Idea {id} approved by {currentUser.Username}");
+                    return Json(new { success = true, message = "Idea approved and advanced to the next stage." });
                 }
-
-                if (!string.IsNullOrEmpty(comments))
+                else
                 {
-                    // Store validation comments (you might want to create a separate table for this)
-                    idea.Payload = comments;
+                    _logger.LogWarning($"Failed to approve idea {id} by {currentUser.Username}");
+                    return Json(new { success = false, message = "Failed to approve the idea. It might not be your turn to approve or an error occurred." });
                 }
-
-                await _ideaService.UpdateIdeaAsync(idea);
-
-                // Kirim email notifikasi di latar belakang
-                var submitter = await _authService.GetEmployeeByBadgeAsync(idea.InitiatorId);
-                if (submitter != null && !string.IsNullOrEmpty(submitter.Email))
-                {
-                    _ = _emailService.SendIdeaStatusUpdateAsync(
-                        submitter.Email,
-                        idea.IdeaName,
-                        "Approved",
-                        comments
-                    ).ConfigureAwait(false);
-                }
-
-                _logger.LogInformation($"Idea {id} approved by {User.Identity?.Name}");
-                return Json(new { success = true, message = "Idea approved successfully!" });
             }
             catch (Exception ex)
             {
@@ -151,34 +178,24 @@ namespace Ideku.Controllers
                     return Json(new { success = false, message = "Rejection reason is required." });
                 }
 
-                var idea = await _ideaService.GetIdeaByIdAsync(id);
-                if (idea == null)
+                var currentUser = await _authService.AuthenticateAsync(User.Identity!.Name!);
+                if (currentUser?.EmployeeId == null)
                 {
-                    return Json(new { success = false, message = "Idea not found." });
+                    return Json(new { success = false, message = "User not authenticated or not linked to an employee." });
                 }
 
-                // Update idea status
-                idea.CurrentStatus = "Rejected";
-                idea.UpdatedDate = DateTime.UtcNow;
-                idea.RejectReason = rejectReason;
-                // CurrentStage does not change on rejection
+                var success = await _workflowService.RejectIdeaAsync(id, currentUser.EmployeeId, rejectReason);
 
-                await _ideaService.UpdateIdeaAsync(idea);
-
-                // Kirim email notifikasi di latar belakang
-                var submitter = await _authService.GetEmployeeByBadgeAsync(idea.InitiatorId);
-                if (submitter != null && !string.IsNullOrEmpty(submitter.Email))
+                if (success)
                 {
-                    _ = _emailService.SendIdeaStatusUpdateAsync(
-                        submitter.Email,
-                        idea.IdeaName,
-                        "Rejected",
-                        rejectReason
-                    ).ConfigureAwait(false);
+                    _logger.LogInformation($"Idea {id} rejected by {currentUser.Username}");
+                    return Json(new { success = true, message = "Idea has been rejected." });
                 }
-
-                _logger.LogInformation($"Idea {id} rejected by {User.Identity?.Name}");
-                return Json(new { success = true, message = "Idea rejected successfully!" });
+                else
+                {
+                    _logger.LogWarning($"Failed to reject idea {id} by {currentUser.Username}");
+                    return Json(new { success = false, message = "Failed to reject the idea." });
+                }
             }
             catch (Exception ex)
             {
@@ -187,244 +204,24 @@ namespace Ideku.Controllers
             }
         }
 
-
-        // GET: /Validation/List - List all ideas pending validation
-        [HttpGet]
-        public async Task<IActionResult> List(string searchString, string selectedDivision, string selectedDepartment, string selectedStatus, int? selectedStage, int pageNumber = 1)
+        private async Task<(Models.Entities.User? user, bool isAuthorized)> CheckValidationPermissionAsync()
         {
-            try
+            var currentUserName = User.Identity?.Name;
+            if (string.IsNullOrEmpty(currentUserName))
             {
-                const int pageSize = 8; // Items per page, adjusted to fit screen
-                var (user, isAuthorized) = await CheckValidationPermissionAsync();
-                if (!isAuthorized)
-                {
-                    TempData["ErrorMessage"] = "You don't have permission to view the validation list.";
-                    return RedirectToAction("Index", "Home");
-                }
-
-                var ideasQuery = GetFilteredIdeasQuery(searchString, selectedDivision, selectedDepartment, selectedStatus, selectedStage);
-
-                var totalItems = await ideasQuery.CountAsync();
-                var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-                var pendingIdeasRaw = await ideasQuery
-                    .OrderByDescending(i => i.SubmittedDate)
-                    .ThenByDescending(i => i.Id) // Add secondary sort for stable ordering
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
-
-                // Create lookup dictionaries for performance
-                var divisions = await _context.Divisi.ToDictionaryAsync(d => d.Id, d => d.NamaDivisi);
-                var departments = await _context.Departement.ToDictionaryAsync(d => d.Id, d => d.NamaDepartement);
-
-                var pendingIdeasVms = pendingIdeasRaw.Select(idea => new ValidationIdeaViewModel
-                {
-                    Id = idea.Id,
-                    IdeaName = idea.IdeaName,
-                    InitiatorName = idea.Initiator?.Name,
-                    DivisionName = idea.Division != null && divisions.ContainsKey(idea.Division) ? divisions[idea.Division] : idea.Division,
-                    DepartmentName = idea.Department != null && departments.ContainsKey(idea.Department) ? departments[idea.Department] : idea.Department,
-                    CategoryName = idea.Category?.NamaCategory,
-                    CurrentStage = idea.CurrentStage,
-                    CurrentStatus = idea.CurrentStatus,
-                    SavingCost = idea.SavingCost,
-                    SubmittedDate = idea.SubmittedDate
-                }).ToList();
-
-                var viewModel = new ValidationListViewModel
-                {
-                    PendingIdeas = pendingIdeasVms,
-                    ValidatorName = user.Name,
-                    SearchString = searchString,
-                    SelectedDivision = selectedDivision,
-                    SelectedDepartment = selectedDepartment,
-                    SelectedStatus = selectedStatus,
-                    SelectedStage = selectedStage,
-                    CurrentPage = pageNumber,
-                    TotalPages = totalPages,
-                    Divisions = await _context.Divisi.Select(d => new SelectListItem { Value = d.Id, Text = d.NamaDivisi }).ToListAsync(),
-                    Departments = await _context.Departement.Select(d => new SelectListItem { Value = d.Id, Text = d.NamaDepartement }).ToListAsync(),
-                    Statuses = new List<SelectListItem>
-                    {
-                        new SelectListItem { Value = "Submitted", Text = "Submitted" },
-                        new SelectListItem { Value = "Under Review", Text = "Under Review" },
-                        new SelectListItem { Value = "Approved", Text = "Approved" },
-                        new SelectListItem { Value = "Rejected", Text = "Rejected" }
-                    },
-                    Stages = new List<SelectListItem>
-                    {
-                        new SelectListItem { Value = "0", Text = "Stage 0" },
-                        new SelectListItem { Value = "1", Text = "Stage 1" },
-                        new SelectListItem { Value = "2", Text = "Stage 2" },
-                        new SelectListItem { Value = "3", Text = "Stage 3" }
-                    }
-                };
-
-                return View("ValidationListView", viewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading validation list");
-                TempData["ErrorMessage"] = "Unable to load validation list.";
-                return RedirectToAction("Index", "Home");
-            }
-        }
-
-        [HttpGet("Validation/FilterIdeas")] // Add explicit route to resolve ambiguity
-        public async Task<IActionResult> FilterIdeas(string searchString, string selectedDivision, string selectedDepartment, string selectedStatus, int? selectedStage, int pageNumber = 1)
-        {
-            const int pageSize = 8;
-            var ideasQuery = GetFilteredIdeasQuery(searchString, selectedDivision, selectedDepartment, selectedStatus, selectedStage);
-
-            var totalItems = await ideasQuery.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-            var filteredIdeasRaw = await ideasQuery
-                .OrderByDescending(i => i.SubmittedDate)
-                .ThenByDescending(i => i.Id)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            // Create lookup dictionaries for performance
-            var divisions = await _context.Divisi.ToDictionaryAsync(d => d.Id, d => d.NamaDivisi);
-            var departments = await _context.Departement.ToDictionaryAsync(d => d.Id, d => d.NamaDepartement);
-
-            var filteredIdeasVms = filteredIdeasRaw.Select(idea => new ValidationIdeaViewModel
-            {
-                Id = idea.Id,
-                IdeaName = idea.IdeaName,
-                InitiatorName = idea.Initiator?.Name,
-                DivisionName = idea.Division != null && divisions.ContainsKey(idea.Division) ? divisions[idea.Division] : idea.Division,
-                DepartmentName = idea.Department != null && departments.ContainsKey(idea.Department) ? departments[idea.Department] : idea.Department,
-                CategoryName = idea.Category?.NamaCategory,
-                CurrentStage = idea.CurrentStage,
-                CurrentStatus = idea.CurrentStatus,
-                SavingCost = idea.SavingCost,
-                SubmittedDate = idea.SubmittedDate
-            }).ToList();
-
-            // We need to build a ViewModel to pass to the pagination partial
-            var paginationViewModel = new ValidationListViewModel
-            {
-                CurrentPage = pageNumber,
-                TotalPages = (int)Math.Ceiling(await ideasQuery.CountAsync() / (double)pageSize),
-                // Pass filter values to maintain state in pagination links
-                SearchString = searchString,
-                SelectedDivision = selectedDivision,
-                SelectedDepartment = selectedDepartment,
-                SelectedStatus = selectedStatus,
-                SelectedStage = selectedStage
-            };
-
-            var tableHtml = await RenderPartialViewToStringAsync("_IdeaListPartial", filteredIdeasVms);
-            var paginationHtml = await RenderPartialViewToStringAsync("_PaginationPartial", paginationViewModel);
-
-            return Json(new { tableHtml, paginationHtml });
-        }
-
-        private IQueryable<Models.Entities.Idea> GetFilteredIdeasQuery(string searchString, string selectedDivision, string selectedDepartment, string selectedStatus, int? selectedStage)
-        {
-            var ideasQuery = _context.Ideas
-                .Include(i => i.Initiator)
-                    .ThenInclude(e => e.Divisi)
-                .Include(i => i.Initiator)
-                    .ThenInclude(e => e.Departement)
-                .Include(i => i.Category)
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                ideasQuery = ideasQuery.Where(i =>
-                    i.IdeaName.Contains(searchString) ||
-                    i.Id.ToString().Contains(searchString) ||
-                    (i.Initiator != null && i.Initiator.Name.Contains(searchString)));
-            }
-            if (!string.IsNullOrEmpty(selectedDivision))
-            {
-                ideasQuery = ideasQuery.Where(i => i.Division == selectedDivision);
-            }
-            if (!string.IsNullOrEmpty(selectedDepartment))
-            {
-                ideasQuery = ideasQuery.Where(i => i.Department == selectedDepartment);
-            }
-            if (!string.IsNullOrEmpty(selectedStatus))
-            {
-                ideasQuery = ideasQuery.Where(i => i.CurrentStatus == selectedStatus);
-            }
-            if (selectedStage.HasValue)
-            {
-                ideasQuery = ideasQuery.Where(i => i.CurrentStage == selectedStage.Value);
+                return (null, false);
             }
 
-            return ideasQuery;
-        }
+            var user = await _authService.AuthenticateAsync(currentUserName);
+            if (user?.Role == null)
+            {
+                return (user, false);
+            }
 
-        private async Task<(Models.Entities.User user, bool isAuthorized)> CheckValidationPermissionAsync()
-        {
-            var currentUser = User.Identity?.Name ?? "";
-            var user = await _authService.AuthenticateAsync(currentUser);
-            var allowedRoles = new List<string> { "R01", "R06", "R07", "R08", "R09", "R10", "R11", "R12" };
-            var isAuthorized = user?.Role != null && allowedRoles.Contains(user.Role.Id);
+            // A user is a validator if their role has an approval level greater than 0.
+            var isAuthorized = user.Role.ApprovalLevel > 0;
+            
             return (user, isAuthorized);
-        }
-
-        // Helper method to render partial view to a string
-        private async Task<string> RenderPartialViewToStringAsync(string viewName, object model)
-        {
-            if (string.IsNullOrEmpty(viewName))
-                viewName = ControllerContext.ActionDescriptor.ActionName;
-
-            ViewData.Model = model;
-
-            using (var writer = new StringWriter())
-            {
-                var viewEngine = HttpContext.RequestServices.GetService(typeof(Microsoft.AspNetCore.Mvc.ViewEngines.ICompositeViewEngine)) as Microsoft.AspNetCore.Mvc.ViewEngines.ICompositeViewEngine;
-                var viewResult = viewEngine.FindView(ControllerContext, viewName, false);
-
-                if (viewResult.Success == false)
-                {
-                    return $"A view with the name {viewName} could not be found";
-                }
-
-                var viewContext = new Microsoft.AspNetCore.Mvc.Rendering.ViewContext(
-                    ControllerContext,
-                    viewResult.View,
-                    ViewData,
-                    TempData,
-                    writer,
-                    new Microsoft.AspNetCore.Mvc.ViewFeatures.HtmlHelperOptions()
-                );
-
-                await viewResult.View.RenderAsync(viewContext);
-                return writer.GetStringBuilder().ToString();
-            }
-        }
-
-        // POST: /Validation/Delete/5 - Hapus ide
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
-        {
-            try
-            {
-                var idea = await _ideaService.GetIdeaByIdAsync(id);
-                if (idea == null)
-                {
-                    return Json(new { success = false, message = "Ide tidak ditemukan." });
-                }
-
-                await _ideaService.DeleteIdeaAsync(id);
-
-                _logger.LogInformation($"Idea {id} dihapus oleh {User.Identity?.Name}");
-                return Json(new { success = true, message = "Ide berhasil dihapus!" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Kesalahan saat menghapus ide {id}");
-                return Json(new { success = false, message = "Terjadi kesalahan saat menghapus ide." });
-            }
         }
     }
 }

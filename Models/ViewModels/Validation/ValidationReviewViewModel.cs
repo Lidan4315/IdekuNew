@@ -1,4 +1,3 @@
-// Models/ViewModels/Validation/ValidationReviewViewModel.cs
 using System.ComponentModel.DataAnnotations;
 
 namespace Ideku.Models.ViewModels.Validation
@@ -33,5 +32,4 @@ namespace Ideku.Models.ViewModels.Validation
         [Display(Name = "Information Request")]
         public string? InformationRequest { get; set; }
     }
-
 }
