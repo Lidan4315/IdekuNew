@@ -1,3 +1,4 @@
+// Models/Entities/Idea.cs (Updated with new structure and custom ID)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -11,21 +12,30 @@ namespace Ideku.Models.Entities
         public int Id { get; set; }
 
         [Required]
-        [Column("cInitiator", TypeName = "varchar(10)")]
+        [Column("idea_code", TypeName = "varchar(20)")]
+        public string IdeaCode { get; set; } = string.Empty; // IMS-00001 format
+
+        [Required]
+        [Column("initiator_id", TypeName = "varchar(10)")]
         public string InitiatorId { get; set; } = string.Empty;
         [ForeignKey("InitiatorId")]
         public Employee? Initiator { get; set; }
 
-        [MaxLength(100)]
-        [Column("cDivision")]
-        public string? Division { get; set; }
+        [Required]
+        [Column("target_division_id", TypeName = "varchar(10)")]
+        public string TargetDivisionId { get; set; } = string.Empty;
+        [ForeignKey("TargetDivisionId")]
+        public Divisi? TargetDivision { get; set; }
 
-        [MaxLength(100)]
-        [Column("cDepartment")]
-        public string? Department { get; set; }
+        [Required]
+        [Column("target_department_id", TypeName = "varchar(10)")]
+        public string TargetDepartmentId { get; set; } = string.Empty;
+        [ForeignKey("TargetDepartmentId")]
+        public Departement? TargetDepartment { get; set; }
 
+        [Required]
         [Column("category_id")]
-        public int? CategoryId { get; set; }
+        public int CategoryId { get; set; }
         [ForeignKey("CategoryId")]
         public Category? Category { get; set; }
 
@@ -34,75 +44,67 @@ namespace Ideku.Models.Entities
         [ForeignKey("EventId")]
         public Event? Event { get; set; }
 
+        // Core Content
         [Required]
-        [Column("cIdea_name")]
+        [Column("idea_name", TypeName = "nvarchar(150)")]
         public string IdeaName { get; set; } = string.Empty;
 
-        [Column("cIdea_issue_background")]
-        public string? IdeaIssueBackground { get; set; }
+        [Required]
+        [Column("issue_background", TypeName = "nvarchar(2000)")]
+        public string IssueBackground { get; set; } = string.Empty;
 
-        [Column("cIdea_solution")]
-        public string? IdeaSolution { get; set; }
+        [Required]
+        [Column("solution", TypeName = "nvarchar(2000)")]
+        public string Solution { get; set; } = string.Empty;
 
-        [Column("nSaving_cost", TypeName = "decimal(18, 2)")]
-        public decimal? SavingCost { get; set; }
+        // Financial Impact
+        [Required]
+        [Column("saving_cost", TypeName = "decimal(18,2)")]
+        public decimal SavingCost { get; set; }
 
-        [Column("cAttachment_file")]
-        public string? AttachmentFile { get; set; }
+        [Column("validated_saving_cost", TypeName = "decimal(18,2)")]
+        public decimal? ValidatedSavingCost { get; set; }
 
-        [Column("dSubmitted_date")]
+        // Workflow Status
+        [Column("current_stage")]
+        public int CurrentStage { get; set; } = 0;
+
+        [Required]
+        [Column("status", TypeName = "varchar(20)")]
+        public string Status { get; set; } = "Submitted";
+
+        [Required]
+        [Column("workflow_type", TypeName = "varchar(20)")]
+        public string WorkflowType { get; set; } = string.Empty; // STANDARD or HIGH_VALUE
+
+        [Column("max_stage")]
+        public int MaxStage { get; set; }
+
+        // Files
+        [Column("attachment_files", TypeName = "nvarchar(max)")]
+        public string? AttachmentFiles { get; set; }
+
+        // Timestamps
+        [Column("submitted_date")]
         public DateTime SubmittedDate { get; set; } = DateTime.UtcNow;
 
-        [Column("dUpdated_date")]
+        [Column("updated_date")]
         public DateTime? UpdatedDate { get; set; }
 
-        [Column("nCurrent_stage")]
-        public int? CurrentStage { get; set; }
+        [Column("completed_date")]
+        public DateTime? CompletedDate { get; set; }
 
-        [MaxLength(50)]
-        [Column("cCurrent_status")]
-        public string? CurrentStatus { get; set; }
-
-        [MaxLength(50)]
-        [Column("cImsCode")]
-        public string? ImsCode { get; set; }
-
-        [Column("payload")]
-        public string? Payload { get; set; }
-
-        [Column("flag_status")]
-        public bool? FlagStatus { get; set; }
-
-        [MaxLength(100)]
-        [Column("cSavingCostOption")]
-        public string? SavingCostOption { get; set; }
-
-        [Column("rejectReason")]
+        // Additional
+        [Column("reject_reason", TypeName = "nvarchar(1000)")]
         public string? RejectReason { get; set; }
 
-        [MaxLength(100)]
-        [Column("catReason")]
-        public string? CatReason { get; set; }
+        [Column("implementation_notes", TypeName = "nvarchar(max)")]
+        public string? ImplementationNotes { get; set; }
 
-        [Column("nSavingCostValidated", TypeName = "decimal(18, 2)")]
-        public decimal? SavingCostValidated { get; set; }
-
-        [MaxLength(100)]
-        [Column("cSavingCostOptionValidated")]
-        public string? SavingCostOptionValidated { get; set; }
-
-        [Column("attachmentMonitoring")]
-        public string? AttachmentMonitoring { get; set; }
-
-        [MaxLength(50)]
-        [Column("cFlagFlow")]
-        public string? FlagFlow { get; set; }
-
-        [MaxLength(100)]
-        [Column("cIdeaType")]
-        public string? IdeaType { get; set; }
-
-        [Column("flagFinance")]
-        public bool? FlagFinance { get; set; }
+        // Navigation Properties
+        public ICollection<ApprovalHistory> ApprovalHistory { get; set; } = new List<ApprovalHistory>();
+        public ICollection<IdeaMilestone> Milestones { get; set; } = new List<IdeaMilestone>();
+        public ICollection<SavingMonitoring> SavingMonitoring { get; set; } = new List<SavingMonitoring>();
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

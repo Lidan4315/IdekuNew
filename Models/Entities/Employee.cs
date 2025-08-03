@@ -1,3 +1,4 @@
+// Models/Entities/Employee.cs (Updated - removed is_active, added employment_status)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -7,47 +8,57 @@ namespace Ideku.Models.Entities
     public class Employee
     {
         [Key]
-        [Column(TypeName = "varchar(10)")]
+        [Column("id", TypeName = "varchar(10)")]
         public string Id { get; set; } = string.Empty;
 
         [Required]
-        [Column(TypeName = "varchar(50)")]
+        [Column("name", TypeName = "varchar(100)")]
         public string Name { get; set; } = string.Empty;
 
         [Required]
-        [Column(TypeName = "varchar(100)")]
+        [Column("email", TypeName = "varchar(100)")]
         public string Email { get; set; } = string.Empty;
 
-        // 🔥 FOREIGN KEY ke Departement
         [Column("departement_id", TypeName = "varchar(10)")]
         public string? DepartementId { get; set; }
         [ForeignKey("DepartementId")]
         public Departement? Departement { get; set; }
 
-        // 🔥 FOREIGN KEY ke Divisi  
         [Column("divisi_id", TypeName = "varchar(10)")]
         public string? DivisiId { get; set; }
         [ForeignKey("DivisiId")]
         public Divisi? Divisi { get; set; }
 
         [Required]
-        [Column(TypeName = "varchar(100)")]
+        [Column("position_title", TypeName = "varchar(100)")]
         public string PositionTitle { get; set; } = string.Empty;
 
-        [Column(TypeName = "varchar(10)")]
-        public string? Position_Lvl { get; set; }
+        [Column("position_level", TypeName = "varchar(10)")]
+        public string? PositionLevel { get; set; }
 
-        [Column(TypeName = "varchar(10)")]
-        public string? Emp_Status { get; set; }
+        [Required]
+        [Column("employment_status", TypeName = "varchar(20)")]
+        public string EmploymentStatus { get; set; } = "Active";
 
-        [Column(TypeName = "varchar(50)")]
-        public string? LdapUser { get; set; }
+        // Navigation Properties
+        public User? User { get; set; }
+        public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
+        public ICollection<ApprovalHistory> ApprovalHistory { get; set; } = new List<ApprovalHistory>();
+        public ICollection<IdeaMilestone> CreatedMilestones { get; set; } = new List<IdeaMilestone>();
+        public ICollection<IdeaMilestone> AssignedMilestones { get; set; } = new List<IdeaMilestone>();
+        public ICollection<SavingMonitoring> ReportedMonitoring { get; set; } = new List<SavingMonitoring>();
+        public ICollection<SavingMonitoring> ReviewedMonitoring { get; set; } = new List<SavingMonitoring>();
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public ICollection<SystemSetting> UpdatedSettings { get; set; } = new List<SystemSetting>();
 
-        // 🔥 COMPUTED PROPERTIES (untuk backward compatibility)
+        // Computed Properties
         [NotMapped]
         public string Department => Departement?.NamaDepartement ?? "";
 
         [NotMapped]  
         public string Division => Divisi?.NamaDivisi ?? "";
+
+        [NotMapped]
+        public bool IsActive => EmploymentStatus == "Active";
     }
 }

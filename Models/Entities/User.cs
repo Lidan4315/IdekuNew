@@ -1,3 +1,4 @@
+// Models/Entities/User.cs (Updated with role relationship)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -7,6 +8,7 @@ namespace Ideku.Models.Entities
     public class User
     {
         [Key]
+        [Column("id")]
         public int Id { get; set; }
 
         [Required]
@@ -24,16 +26,21 @@ namespace Ideku.Models.Entities
         public Role Role { get; set; } = null!;
 
         [Required]
-        [Column(TypeName = "varchar(50)")]
+        [Column("username", TypeName = "varchar(50)")]
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [Column(TypeName = "varchar(150)")]
+        [Column("name", TypeName = "varchar(150)")]
         public string Name { get; set; } = string.Empty;
 
-        [Required]
-        [Column(TypeName = "varchar(50)")]
-        public bool FlagActing { get; set; }
+        [Column("is_acting")]
+        public bool IsActing { get; set; } = false;
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
+
+        [Column("last_login")]
+        public DateTime? LastLogin { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

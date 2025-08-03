@@ -162,8 +162,86 @@
                             <th>Delete</th>
                         </tr>
                     </thead>
-                    <tbody id="idea-table-body">
-                        @await Html.PartialAsync("_IdeaListPartial", Model.PendingIdeas)
+                    <tbody>
+                        @foreach (var idea in Model.PendingIdeas)
+                        {
+                            <tr style="cursor: pointer;" onclick="window.location='@Url.Action("Review", "Validation", new { id = idea.Id })'">
+                                <td><span class="badge bg-light text-dark">#@idea.Id</span></td>
+                                <td>
+                                    <div class="truncate-title" title="@idea.IdeaName">
+                                        @idea.IdeaName
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="submitter-info">
+                                        <strong>@idea.InitiatorName</strong>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div><strong>@idea.DivisionName</strong></div>
+                                </td>
+                                <td>
+                                    <small class="text-muted">@idea.DepartmentName</small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(idea.CategoryName))
+                                    {
+                                        <span class="badge bg-info">@idea.CategoryName</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">S@(idea.CurrentStage)</span>
+                                </td>
+                                <td>
+                                    @if (idea.CurrentStatus == "Rejected")
+                                    {
+                                        <span class="text-danger">S@(idea.CurrentStage) Rejected</span>
+                                    }
+                                    else if (idea.CurrentStatus == "Approved")
+                                    {
+                                        <span class="text-success">S@(idea.CurrentStage) Approve</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Waiting Approve</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (idea.SavingCost.HasValue && idea.SavingCost > 0)
+                                    {
+                                        <span class="fw-bold text-success">@idea.SavingCost.Value.ToString("N0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var statusClass = idea.CurrentStatus switch
+                                        {
+                                            "Submitted" => "bg-primary",
+                                            "Under Review" => "bg-warning",
+                                            "Rejected" => "bg-danger",
+                                            "Completed" => "bg-success",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @statusClass">@idea.CurrentStatus</span>
+                                </td>
+                                <td>
+                                    <div>@idea.SubmittedDate.ToString("MMM dd")</div>
+                                    <small class="text-muted">@idea.SubmittedDate.ToString("HH:mm")</small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm delete-idea-btn" data-id="@idea.Id" onclick="event.stopPropagation();"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             }

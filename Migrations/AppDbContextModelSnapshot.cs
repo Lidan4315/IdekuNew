@@ -17,10 +17,80 @@ namespace Ideku.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.7")
+                .HasAnnotation("ProductVersion", "8.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Ideku.Models.Entities.ApprovalHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTime>("ActionDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("action_date");
+
+                    b.Property<string>("ApproverId")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("approver_id");
+
+                    b.Property<string>("ApproverRoleId")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("approver_role_id");
+
+                    b.Property<string>("AttachmentFiles")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("attachment_files");
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("comments");
+
+                    b.Property<int>("IdeaId")
+                        .HasColumnType("int")
+                        .HasColumnName("idea_id");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("varchar(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("int")
+                        .HasColumnName("stage");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("user_agent");
+
+                    b.Property<decimal?>("ValidatedSavingCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("validated_saving_cost");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApproverRoleId");
+
+                    b.HasIndex("ApproverId", "ActionDate")
+                        .HasDatabaseName("IX_ApprovalHistory_Approver_Date");
+
+                    b.HasIndex("IdeaId", "Stage", "ActionDate")
+                        .HasDatabaseName("IX_ApprovalHistory_Idea_Stage_Date");
+
+                    b.ToTable("approval_history");
+                });
 
             modelBuilder.Entity("Ideku.Models.Entities.Category", b =>
                 {
@@ -31,9 +101,21 @@ namespace Ideku.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
                     b.Property<string>("NamaCategory")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("nvarchar(100)")
                         .HasColumnName("nama_category");
 
                     b.HasKey("Id");
@@ -54,7 +136,7 @@ namespace Ideku.Migrations
 
                     b.Property<string>("NamaDepartement")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("nvarchar(200)")
                         .HasColumnName("nama_departement");
 
                     b.HasKey("Id");
@@ -72,7 +154,7 @@ namespace Ideku.Migrations
 
                     b.Property<string>("NamaDivisi")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("nvarchar(200)")
                         .HasColumnName("nama_divisi");
 
                     b.HasKey("Id");
@@ -83,7 +165,8 @@ namespace Ideku.Migrations
             modelBuilder.Entity("Ideku.Models.Entities.Employee", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("varchar(10)");
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("id");
 
                     b.Property<string>("DepartementId")
                         .HasColumnType("varchar(10)")
@@ -95,24 +178,27 @@ namespace Ideku.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("email");
 
-                    b.Property<string>("Emp_Status")
-                        .HasColumnType("varchar(10)");
-
-                    b.Property<string>("LdapUser")
-                        .HasColumnType("varchar(50)");
+                    b.Property<string>("EmploymentStatus")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("employment_status");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PositionLevel")
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("position_level");
 
                     b.Property<string>("PositionTitle")
                         .IsRequired()
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<string>("Position_Lvl")
-                        .HasColumnType("varchar(10)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("position_title");
 
                     b.HasKey("Id");
 
@@ -132,9 +218,21 @@ namespace Ideku.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
                     b.Property<string>("NamaEvent")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("nvarchar(100)")
                         .HasColumnName("nama_event");
 
                     b.HasKey("Id");
@@ -151,120 +249,100 @@ namespace Ideku.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AttachmentFile")
+                    b.Property<string>("AttachmentFiles")
                         .HasColumnType("nvarchar(max)")
-                        .HasColumnName("cAttachment_file");
+                        .HasColumnName("attachment_files");
 
-                    b.Property<string>("AttachmentMonitoring")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("attachmentMonitoring");
-
-                    b.Property<string>("CatReason")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("catReason");
-
-                    b.Property<int?>("CategoryId")
+                    b.Property<int>("CategoryId")
                         .HasColumnType("int")
                         .HasColumnName("category_id");
 
-                    b.Property<int?>("CurrentStage")
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_date");
+
+                    b.Property<int>("CurrentStage")
                         .HasColumnType("int")
-                        .HasColumnName("nCurrent_stage");
-
-                    b.Property<string>("CurrentStatus")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("cCurrent_status");
-
-                    b.Property<string>("Department")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("cDepartment");
-
-                    b.Property<string>("Division")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("cDivision");
+                        .HasColumnName("current_stage");
 
                     b.Property<int?>("EventId")
                         .HasColumnType("int")
                         .HasColumnName("event_id");
 
-                    b.Property<bool?>("FlagFinance")
-                        .HasColumnType("bit")
-                        .HasColumnName("flagFinance");
-
-                    b.Property<string>("FlagFlow")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("cFlagFlow");
-
-                    b.Property<bool?>("FlagStatus")
-                        .HasColumnType("bit")
-                        .HasColumnName("flag_status");
-
-                    b.Property<string>("IdeaIssueBackground")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("cIdea_issue_background");
+                    b.Property<string>("IdeaCode")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("idea_code");
 
                     b.Property<string>("IdeaName")
                         .IsRequired()
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("idea_name");
+
+                    b.Property<string>("ImplementationNotes")
                         .HasColumnType("nvarchar(max)")
-                        .HasColumnName("cIdea_name");
-
-                    b.Property<string>("IdeaSolution")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("cIdea_solution");
-
-                    b.Property<string>("IdeaType")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("cIdeaType");
-
-                    b.Property<string>("ImsCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("cImsCode");
+                        .HasColumnName("implementation_notes");
 
                     b.Property<string>("InitiatorId")
                         .IsRequired()
                         .HasColumnType("varchar(10)")
-                        .HasColumnName("cInitiator");
+                        .HasColumnName("initiator_id");
 
-                    b.Property<string>("Payload")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("payload");
+                    b.Property<string>("IssueBackground")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("issue_background");
+
+                    b.Property<int>("MaxStage")
+                        .HasColumnType("int")
+                        .HasColumnName("max_stage");
 
                     b.Property<string>("RejectReason")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("rejectReason");
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("reject_reason");
 
-                    b.Property<decimal?>("SavingCost")
-                        .HasColumnType("decimal(18, 2)")
-                        .HasColumnName("nSaving_cost");
+                    b.Property<decimal>("SavingCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("saving_cost");
 
-                    b.Property<string>("SavingCostOption")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("cSavingCostOption");
+                    b.Property<string>("Solution")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("solution");
 
-                    b.Property<string>("SavingCostOptionValidated")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("cSavingCostOptionValidated");
-
-                    b.Property<decimal?>("SavingCostValidated")
-                        .HasColumnType("decimal(18, 2)")
-                        .HasColumnName("nSavingCostValidated");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
 
                     b.Property<DateTime>("SubmittedDate")
                         .HasColumnType("datetime2")
-                        .HasColumnName("dSubmitted_date");
+                        .HasColumnName("submitted_date");
+
+                    b.Property<string>("TargetDepartmentId")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("target_department_id");
+
+                    b.Property<string>("TargetDivisionId")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("target_division_id");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2")
-                        .HasColumnName("dUpdated_date");
+                        .HasColumnName("updated_date");
+
+                    b.Property<decimal?>("ValidatedSavingCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("validated_saving_cost");
+
+                    b.Property<string>("WorkflowType")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("workflow_type");
 
                     b.HasKey("Id");
 
@@ -272,9 +350,203 @@ namespace Ideku.Migrations
 
                     b.HasIndex("EventId");
 
-                    b.HasIndex("InitiatorId");
+                    b.HasIndex("IdeaCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Ideas_IdeaCode");
+
+                    b.HasIndex("TargetDepartmentId");
+
+                    b.HasIndex("TargetDivisionId");
+
+                    b.HasIndex("InitiatorId", "Status")
+                        .HasDatabaseName("IX_Ideas_Initiator_Status");
+
+                    b.HasIndex("Status", "CurrentStage")
+                        .HasDatabaseName("IX_Ideas_Status_Stage");
 
                     b.ToTable("ideas");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.IdeaMilestone", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AssignedTo")
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("assigned_to");
+
+                    b.Property<DateTime?>("CompletionDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completion_date");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_date");
+
+                    b.Property<int>("IdeaId")
+                        .HasColumnType("int")
+                        .HasColumnName("idea_id");
+
+                    b.Property<string>("MilestoneDescription")
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("milestone_description");
+
+                    b.Property<string>("MilestoneTitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("milestone_title");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("ProgressPercentage")
+                        .HasColumnType("int")
+                        .HasColumnName("progress_percentage");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("int")
+                        .HasColumnName("stage");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("TargetDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("target_date");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("AssignedTo", "Status")
+                        .HasDatabaseName("IX_Milestones_Assignee_Status");
+
+                    b.HasIndex("IdeaId", "Stage")
+                        .HasDatabaseName("IX_Milestones_Idea_Stage");
+
+                    b.ToTable("idea_milestones");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("action_url");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_date");
+
+                    b.Property<DateTime?>("EmailSentDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("email_sent_date");
+
+                    b.Property<int?>("IdeaId")
+                        .HasColumnType("int")
+                        .HasColumnName("idea_id");
+
+                    b.Property<bool>("IsEmailSent")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_email_sent");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_read");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("message");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("notification_type");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("priority");
+
+                    b.Property<DateTime?>("ReadDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("read_date");
+
+                    b.Property<string>("RecipientId")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("recipient_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdeaId", "NotificationType")
+                        .HasDatabaseName("IX_Notifications_Idea_Type");
+
+                    b.HasIndex("RecipientId", "IsRead", "CreatedDate")
+                        .HasDatabaseName("IX_Notifications_Recipient_Read_Date");
+
+                    b.ToTable("notifications");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Permission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("module");
+
+                    b.Property<string>("PermissionName")
+                        .IsRequired()
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("permission_name");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("permissions");
                 });
 
             modelBuilder.Entity("Ideku.Models.Entities.Role", b =>
@@ -282,6 +554,18 @@ namespace Ideku.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("varchar(10)")
                         .HasColumnName("id");
+
+                    b.Property<int>("ApprovalLevel")
+                        .HasColumnType("int")
+                        .HasColumnName("approval_level");
+
+                    b.Property<bool>("CanApproveHighValue")
+                        .HasColumnType("bit")
+                        .HasColumnName("can_approve_high_value");
+
+                    b.Property<bool>("CanApproveStandard")
+                        .HasColumnType("bit")
+                        .HasColumnName("can_approve_standard");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -305,11 +589,178 @@ namespace Ideku.Migrations
                     b.ToTable("roles");
                 });
 
+            modelBuilder.Entity("Ideku.Models.Entities.RolePermission", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("role_id");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int")
+                        .HasColumnName("permission_id");
+
+                    b.Property<DateTime>("GrantedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("granted_at");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("role_permissions");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.SavingMonitoring", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("ActualSaving")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("actual_saving");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_date");
+
+                    b.Property<int>("IdeaId")
+                        .HasColumnType("int")
+                        .HasColumnName("idea_id");
+
+                    b.Property<string>("MonitoringNotes")
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("monitoring_notes");
+
+                    b.Property<string>("MonitoringPeriod")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("monitoring_period");
+
+                    b.Property<DateTime>("PeriodEndDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("period_end_date");
+
+                    b.Property<DateTime>("PeriodStartDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("period_start_date");
+
+                    b.Property<decimal>("PlannedSaving")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("planned_saving");
+
+                    b.Property<string>("ReportedBy")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("reported_by");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("review_status");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<string>("SupportingDocuments")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("supporting_documents");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_date");
+
+                    b.Property<decimal?>("Variance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("variance");
+
+                    b.Property<decimal?>("VariancePercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("variance_percentage");
+
+                    b.Property<string>("VarianceReason")
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("variance_reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("IdeaId", "PeriodStartDate")
+                        .HasDatabaseName("IX_SavingMonitoring_Idea_Period");
+
+                    b.HasIndex("ReportedBy", "CreatedDate")
+                        .HasDatabaseName("IX_SavingMonitoring_Reporter_Date");
+
+                    b.ToTable("saving_monitoring");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.SystemSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("data_type");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_system");
+
+                    b.Property<string>("SettingKey")
+                        .IsRequired()
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("setting_key");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("setting_value");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("updated_by");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SettingKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SystemSettings_Key");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.ToTable("system_settings");
+                });
+
             modelBuilder.Entity("Ideku.Models.Entities.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("id");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
@@ -322,13 +773,22 @@ namespace Ideku.Migrations
                         .HasColumnType("varchar(10)")
                         .HasColumnName("employee_id");
 
-                    b.Property<string>("FlagActing")
-                        .IsRequired()
-                        .HasColumnType("varchar(50)");
+                    b.Property<bool>("IsActing")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_acting");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_login");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("varchar(150)");
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("name");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
@@ -341,15 +801,49 @@ namespace Ideku.Migrations
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("username");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_EmployeeId");
 
                     b.HasIndex("RoleId");
 
+                    b.HasIndex("Username")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_Username");
+
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.ApprovalHistory", b =>
+                {
+                    b.HasOne("Ideku.Models.Entities.Employee", "Approver")
+                        .WithMany("ApprovalHistory")
+                        .HasForeignKey("ApproverId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Role", "ApproverRole")
+                        .WithMany()
+                        .HasForeignKey("ApproverRoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Idea", "Idea")
+                        .WithMany("ApprovalHistory")
+                        .HasForeignKey("IdeaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Approver");
+
+                    b.Navigation("ApproverRole");
+
+                    b.Navigation("Idea");
                 });
 
             modelBuilder.Entity("Ideku.Models.Entities.Departement", b =>
@@ -368,12 +862,12 @@ namespace Ideku.Migrations
                     b.HasOne("Ideku.Models.Entities.Departement", "Departement")
                         .WithMany("Employees")
                         .HasForeignKey("DepartementId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Ideku.Models.Entities.Divisi", "Divisi")
                         .WithMany("Employees")
                         .HasForeignKey("DivisiId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Departement");
 
@@ -383,19 +877,32 @@ namespace Ideku.Migrations
             modelBuilder.Entity("Ideku.Models.Entities.Idea", b =>
                 {
                     b.HasOne("Ideku.Models.Entities.Category", "Category")
-                        .WithMany()
+                        .WithMany("Ideas")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("Ideku.Models.Entities.Event", "Event")
-                        .WithMany()
+                        .WithMany("Ideas")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Ideku.Models.Entities.Employee", "Initiator")
-                        .WithMany()
+                        .WithMany("Ideas")
                         .HasForeignKey("InitiatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Departement", "TargetDepartment")
+                        .WithMany("TargetIdeas")
+                        .HasForeignKey("TargetDepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Divisi", "TargetDivision")
+                        .WithMany("TargetIdeas")
+                        .HasForeignKey("TargetDivisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -403,18 +910,122 @@ namespace Ideku.Migrations
                     b.Navigation("Event");
 
                     b.Navigation("Initiator");
+
+                    b.Navigation("TargetDepartment");
+
+                    b.Navigation("TargetDivision");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.IdeaMilestone", b =>
+                {
+                    b.HasOne("Ideku.Models.Entities.Employee", "Assignee")
+                        .WithMany("AssignedMilestones")
+                        .HasForeignKey("AssignedTo")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Ideku.Models.Entities.Employee", "Creator")
+                        .WithMany("CreatedMilestones")
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Idea", "Idea")
+                        .WithMany("Milestones")
+                        .HasForeignKey("IdeaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignee");
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Idea");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Notification", b =>
+                {
+                    b.HasOne("Ideku.Models.Entities.Idea", "Idea")
+                        .WithMany("Notifications")
+                        .HasForeignKey("IdeaId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Ideku.Models.Entities.Employee", "Recipient")
+                        .WithMany("Notifications")
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Idea");
+
+                    b.Navigation("Recipient");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.RolePermission", b =>
+                {
+                    b.HasOne("Ideku.Models.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.SavingMonitoring", b =>
+                {
+                    b.HasOne("Ideku.Models.Entities.Idea", "Idea")
+                        .WithMany("SavingMonitoring")
+                        .HasForeignKey("IdeaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Employee", "Reporter")
+                        .WithMany("ReportedMonitoring")
+                        .HasForeignKey("ReportedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ideku.Models.Entities.Employee", "Reviewer")
+                        .WithMany("ReviewedMonitoring")
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Idea");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("Reviewer");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.SystemSetting", b =>
+                {
+                    b.HasOne("Ideku.Models.Entities.Employee", "UpdatedByEmployee")
+                        .WithMany("UpdatedSettings")
+                        .HasForeignKey("UpdatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UpdatedByEmployee");
                 });
 
             modelBuilder.Entity("Ideku.Models.Entities.User", b =>
                 {
                     b.HasOne("Ideku.Models.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .WithOne("User")
+                        .HasForeignKey("Ideku.Models.Entities.User", "EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Ideku.Models.Entities.Role", "Role")
-                        .WithMany()
+                        .WithMany("Users")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -424,9 +1035,16 @@ namespace Ideku.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("Ideku.Models.Entities.Category", b =>
+                {
+                    b.Navigation("Ideas");
+                });
+
             modelBuilder.Entity("Ideku.Models.Entities.Departement", b =>
                 {
                     b.Navigation("Employees");
+
+                    b.Navigation("TargetIdeas");
                 });
 
             modelBuilder.Entity("Ideku.Models.Entities.Divisi", b =>
@@ -434,6 +1052,57 @@ namespace Ideku.Migrations
                     b.Navigation("Departements");
 
                     b.Navigation("Employees");
+
+                    b.Navigation("TargetIdeas");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Employee", b =>
+                {
+                    b.Navigation("ApprovalHistory");
+
+                    b.Navigation("AssignedMilestones");
+
+                    b.Navigation("CreatedMilestones");
+
+                    b.Navigation("Ideas");
+
+                    b.Navigation("Notifications");
+
+                    b.Navigation("ReportedMonitoring");
+
+                    b.Navigation("ReviewedMonitoring");
+
+                    b.Navigation("UpdatedSettings");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Event", b =>
+                {
+                    b.Navigation("Ideas");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Idea", b =>
+                {
+                    b.Navigation("ApprovalHistory");
+
+                    b.Navigation("Milestones");
+
+                    b.Navigation("Notifications");
+
+                    b.Navigation("SavingMonitoring");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("Ideku.Models.Entities.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
+
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

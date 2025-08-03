@@ -57,6 +57,22 @@ namespace Ideku.Services
             }
         }
 
+        public async Task<bool> SendGenericEmailAsync(string recipientEmail, string subject, string message, string actionUrl)
+        {
+            try
+            {
+                var body = GenerateGenericEmailBody(subject, message, actionUrl);
+                await SendEmailAsync(recipientEmail, subject, body);
+                _logger.LogInformation($"Generic email sent to {recipientEmail} with subject '{subject}'");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send generic email to {recipientEmail}");
+                return false;
+            }
+        }
+
         private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
         {
             using var client = new SmtpClient(_emailSettings.SmtpHost, _emailSettings.SmtpPort);
@@ -195,6 +211,54 @@ namespace Ideku.Services
             <p>You can view your idea details and track its progress by logging into the Ideku system.</p>
             
             <p>Thank you for your contribution to innovation!</p>
+            
+            <p>Best regards,<br>
+            The Ideku Team</p>
+        </div>
+        
+        <div class='footer'>
+            <p>This is an automated message from the Ideku Idea Management System. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+
+        private string GenerateGenericEmailBody(string subject, string message, string actionUrl)
+        {
+            var baseUrl = _emailSettings.BaseUrl;
+            var fullActionUrl = $"{baseUrl}{actionUrl}";
+
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #1b6ec2, #0077cc); color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px -30px; }}
+        .header h1 {{ margin: 0; font-size: 24px; }}
+        .content {{ line-height: 1.6; color: #333; }}
+        .action-button {{ display: inline-block; background-color: #1b6ec2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }}
+        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>{subject}</h1>
+        </div>
+        
+        <div class='content'>
+            <p>Hello,</p>
+            
+            <p>{message}</p>
+            
+            <a href='{fullActionUrl}' class='action-button' style='color: white !important;'>View Details</a>
+            
+            <p>If you cannot click the button above, copy and paste this URL into your browser:</p>
+            <p style='word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;'>{fullActionUrl}</p>
             
             <p>Best regards,<br>
             The Ideku Team</p>
