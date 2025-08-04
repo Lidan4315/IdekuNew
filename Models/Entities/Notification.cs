@@ -17,8 +17,8 @@ namespace Ideku.Models.Entities
         [ForeignKey("RecipientId")]
         public Employee Recipient { get; set; } = null!;
 
-        [Column("idea_id")]
-        public int? IdeaId { get; set; }
+        [Column("idea_id", TypeName = "varchar(20)")]
+        public string? IdeaId { get; set; }
         [ForeignKey("IdeaId")]
         public Idea? Idea { get; set; }
 

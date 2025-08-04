@@ -142,7 +142,7 @@ static void SeedDatabase(IServiceProvider services)
         new Ideku.Models.Entities.Category { NamaCategory = "General Transformation" },
         new Ideku.Models.Entities.Category { NamaCategory = "Increase Revenue" },
         new Ideku.Models.Entities.Category { NamaCategory = "Cost Reduction (CR)" },
-        new Ideku.Models.Entities.Category { NamaCategory = "Digitalisasi" },
+        new Ideku.Models.Entities.Category { NamaCategory = "Digitalization" },
     };
     context.Category.AddRange(categories);
     context.SaveChanges();

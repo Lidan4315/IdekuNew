@@ -62,12 +62,10 @@ namespace Ideku.Controllers
             if (!string.IsNullOrEmpty(searchString))
             {
                 var upperSearchString = searchString.ToUpper();
-                bool isNumeric = int.TryParse(searchString, out int numericId);
                 query = query.Where(i =>
                     (i.IdeaName != null && i.IdeaName.ToUpper().Contains(upperSearchString)) ||
                     (i.Initiator != null && i.Initiator.Name.ToUpper().Contains(upperSearchString)) ||
-                    (i.IdeaCode != null && i.IdeaCode.ToUpper().Contains(upperSearchString)) ||
-                    (isNumeric && i.Id == numericId)
+                    (i.Id != null && i.Id.ToUpper().Contains(upperSearchString))
                 );
             }
 
@@ -158,12 +156,10 @@ namespace Ideku.Controllers
                 if (!string.IsNullOrEmpty(searchString))
                 {
                     var upperSearchString = searchString.ToUpper();
-                    bool isNumeric = int.TryParse(searchString, out int numericId);
                     query = query.Where(i =>
                         (i.IdeaName != null && i.IdeaName.ToUpper().Contains(upperSearchString)) ||
                         (i.Initiator != null && i.Initiator.Name.ToUpper().Contains(upperSearchString)) ||
-                        (i.IdeaCode != null && i.IdeaCode.ToUpper().Contains(upperSearchString)) ||
-                        (isNumeric && i.Id == numericId)
+                        (i.Id != null && i.Id.ToUpper().Contains(upperSearchString))
                     );
                 }
                 if (!string.IsNullOrEmpty(selectedDivision))
@@ -242,7 +238,7 @@ namespace Ideku.Controllers
 
         // GET: /Validation/Review/5 - Review idea for validation
         [HttpGet]
-        public async Task<IActionResult> Review(int id)
+        public async Task<IActionResult> Review(string id)
         {
             var (user, isAuthorized) = await CheckValidationPermissionAsync();
             if (user == null || !isAuthorized)
@@ -302,7 +298,7 @@ namespace Ideku.Controllers
         // POST: /Validation/Approve/5 - Approve idea
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Approve(int id, string? comments, decimal? validatedSavingCost)
+        public async Task<IActionResult> Approve(string id, string? comments, decimal? validatedSavingCost)
         {
             try
             {
@@ -335,7 +331,7 @@ namespace Ideku.Controllers
         // POST: /Validation/Reject/5 - Reject idea
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Reject(int id, string rejectReason)
+        public async Task<IActionResult> Reject(string id, string rejectReason)
         {
             try
             {

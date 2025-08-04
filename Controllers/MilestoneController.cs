@@ -26,7 +26,7 @@ namespace Ideku.Controllers
         }
 
         // GET: /Milestone/Index/5
-        public async Task<IActionResult> Index(int id)
+        public async Task<IActionResult> Index(string id)
         {
             var idea = await _context.Ideas
                 .Include(i => i.Milestones)
@@ -60,7 +60,7 @@ namespace Ideku.Controllers
         // POST: /Milestone/CreateMilestone
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateMilestone(int ideaId, string milestoneText)
+        public async Task<IActionResult> CreateMilestone(string ideaId, string milestoneText)
         {
             var idea = await _context.Ideas.FindAsync(ideaId);
             var currentUser = await _authService.AuthenticateAsync(User.Identity.Name);

@@ -155,8 +155,7 @@ namespace Ideku.Controllers
                     {
                         filteredIdeas = filteredIdeas.Where(i => 
                             i.IdeaName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                            i.Id.ToString().Contains(searchString) ||
-                            i.IdeaCode.Contains(searchString, StringComparison.OrdinalIgnoreCase));
+                            i.Id.Contains(searchString, StringComparison.OrdinalIgnoreCase));
                     }
 
                     if (selectedCategory.HasValue)
@@ -300,7 +299,7 @@ namespace Ideku.Controllers
 
         // GET: /Idea/Details/5 - Tampilkan detail idea
         [HttpGet]
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(string id)
         {
             try
             {
@@ -345,7 +344,7 @@ namespace Ideku.Controllers
 
         // GET: /Idea/Edit/5 - Tampilkan form edit idea
         [HttpGet]
-        public async Task<IActionResult> Edit(int id)
+        public async Task<IActionResult> Edit(string id)
         {
             try
             {
@@ -404,7 +403,7 @@ namespace Ideku.Controllers
         // POST: /Idea/Edit/5 - Proses update idea
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, IdeaCreateViewModel model)
+        public async Task<IActionResult> Edit(string id, IdeaCreateViewModel model)
         {
             try
             {
@@ -436,7 +435,7 @@ namespace Ideku.Controllers
         // POST: /Idea/Delete/5 - Delete idea
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
             try
             {
@@ -483,7 +482,7 @@ namespace Ideku.Controllers
 
         // GET: /Idea/DownloadAll/5 - Download all attachments as a zip file
         [HttpGet]
-        public async Task<IActionResult> DownloadAll(int ideaId)
+        public async Task<IActionResult> DownloadAll(string ideaId)
         {
             var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId);
             if (!hasAccess)
@@ -528,7 +527,7 @@ namespace Ideku.Controllers
 
         // GET: /Idea/Download/filename - Download attachment
         [HttpGet]
-        public async Task<IActionResult> Download(string filename, int ideaId)
+        public async Task<IActionResult> Download(string filename, string ideaId)
         {
             var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId, filename);
             if (!hasAccess || idea == null)
@@ -560,7 +559,7 @@ namespace Ideku.Controllers
 
         // 🔥 NEW: GET: /Idea/ViewAttachment/filename - View attachment inline
         [HttpGet]
-        public async Task<IActionResult> ViewAttachment(string filename, int ideaId)
+        public async Task<IActionResult> ViewAttachment(string filename, string ideaId)
         {
             var (idea, hasAccess) = await CheckFileAccessPermissionAsync(ideaId, filename);
             if (!hasAccess || idea == null)
@@ -594,7 +593,7 @@ namespace Ideku.Controllers
             }
         }
 
-        private async Task<(Idea? idea, bool hasAccess)> CheckFileAccessPermissionAsync(int ideaId, string? requiredFilename = null)
+        private async Task<(Idea? idea, bool hasAccess)> CheckFileAccessPermissionAsync(string ideaId, string? requiredFilename = null)
         {
             var idea = await _ideaService.GetIdeaByIdAsync(ideaId);
             if (idea == null)
@@ -692,7 +691,7 @@ namespace Ideku.Controllers
         // API: /Idea/ResendValidationEmails
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResendValidationEmails(int id)
+        public async Task<IActionResult> ResendValidationEmails(string id)
         {
             try
             {

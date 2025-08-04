@@ -51,7 +51,7 @@ namespace Ideku.Data.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Idea?> GetByIdAsync(int id)
+        public async Task<Idea?> GetByIdAsync(string id)
         {
             return await _context.Ideas
                 .Include(i => i.Category)
@@ -72,7 +72,7 @@ namespace Ideku.Data.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(string id)
         {
             var idea = await GetByIdAsync(id);
             if (idea != null)

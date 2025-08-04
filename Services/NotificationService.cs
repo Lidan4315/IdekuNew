@@ -47,7 +47,7 @@ namespace Ideku.Services
             }
         }
 
-        public async Task SendApprovalRequestAsync(int ideaId, string recipientId, int stage)
+        public async Task SendApprovalRequestAsync(string ideaId, string recipientId, int stage)
         {
             var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
             if (idea == null) return;
@@ -61,7 +61,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "APPROVAL_REQUEST",
                 Title = "New Idea Requires Your Approval",
-                Message = $"Idea '{idea.IdeaName}' (Code: {idea.IdeaCode}) is waiting for your review at Stage {stage}",
+                Message = $"Idea '{idea.IdeaName}' (Code: {idea.Id}) is waiting for your review at Stage {stage}",
                 Priority = "High",
                 ActionUrl = $"/approval/review/{ideaId}"
             };
@@ -69,7 +69,7 @@ namespace Ideku.Services
             await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
 
-        public async Task SendCompletionNotificationAsync(int ideaId)
+        public async Task SendCompletionNotificationAsync(string ideaId)
         {
             var idea = await _context.Ideas
                 .Include(i => i.Initiator)
@@ -85,7 +85,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "IDEA_APPROVED",
                 Title = "Your Idea Has Been Approved!",
-                Message = $"Congratulations! Your idea '{idea.IdeaName}' (Code: {idea.IdeaCode}) has been fully approved and is ready for implementation.",
+                Message = $"Congratulations! Your idea '{idea.IdeaName}' (Code: {idea.Id}) has been fully approved and is ready for implementation.",
                 Priority = "High",
                 ActionUrl = $"/idea/details/{ideaId}"
             };
@@ -93,7 +93,7 @@ namespace Ideku.Services
             await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
 
-        public async Task SendRejectionNotificationAsync(int ideaId, string rejectReason)
+        public async Task SendRejectionNotificationAsync(string ideaId, string rejectReason)
         {
             var idea = await _context.Ideas
                 .Include(i => i.Initiator)
@@ -109,7 +109,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "IDEA_REJECTED",
                 Title = "Your Idea Requires Revision",
-                Message = $"Your idea '{idea.IdeaName}' (Code: {idea.IdeaCode}) needs revision. Reason: {rejectReason}",
+                Message = $"Your idea '{idea.IdeaName}' (Code: {idea.Id}) needs revision. Reason: {rejectReason}",
                 Priority = "High",
                 ActionUrl = $"/idea/details/{ideaId}"
             };
@@ -117,7 +117,7 @@ namespace Ideku.Services
             await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
 
-        public async Task SendInfoRequestNotificationAsync(int ideaId, string infoRequest)
+        public async Task SendInfoRequestNotificationAsync(string ideaId, string infoRequest)
         {
             var idea = await _context.Ideas
                 .Include(i => i.Initiator)
@@ -133,7 +133,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "MORE_INFO_REQUIRED",
                 Title = "Additional Information Required",
-                Message = $"More information is needed for your idea '{idea.IdeaName}' (Code: {idea.IdeaCode}): {infoRequest}",
+                Message = $"More information is needed for your idea '{idea.IdeaName}' (Code: {idea.Id}): {infoRequest}",
                 Priority = "Normal",
                 ActionUrl = $"/idea/edit/{ideaId}"
             };
@@ -141,7 +141,7 @@ namespace Ideku.Services
             await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
 
-        public async Task SendProgressUpdateAsync(int ideaId, string recipientId, int stage, string action)
+        public async Task SendProgressUpdateAsync(string ideaId, string recipientId, int stage, string action)
         {
             var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
             if (idea == null) return;
@@ -155,7 +155,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "PROGRESS_UPDATE",
                 Title = "Idea Progress Update",
-                Message = $"Idea '{idea.IdeaName}' (Code: {idea.IdeaCode}) has been {action.ToLower()} at Stage {stage}",
+                Message = $"Idea '{idea.IdeaName}' (Code: {idea.Id}) has been {action.ToLower()} at Stage {stage}",
                 Priority = "Normal",
                 ActionUrl = $"/idea/details/{ideaId}"
             };
@@ -191,7 +191,7 @@ namespace Ideku.Services
             }
         }
 
-        public async Task SendMilestoneCreationRequestAsync(int ideaId, string recipientId)
+        public async Task SendMilestoneCreationRequestAsync(string ideaId, string recipientId)
         {
             var idea = await _context.Ideas.FindAsync(ideaId);
             if (idea == null) return;
@@ -205,7 +205,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "MILESTONE_REQUEST",
                 Title = "Action Required: Create Milestone",
-                Message = $"Please create a milestone for the idea '{idea.IdeaName}' (Code: {idea.IdeaCode}).",
+                Message = $"Please create a milestone for the idea '{idea.IdeaName}' (Code: {idea.Id}).",
                 Priority = "High",
                 ActionUrl = $"/idea/details/{ideaId}#milestones"
             };
@@ -213,7 +213,7 @@ namespace Ideku.Services
             await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
 
-        public async Task SendMilestoneAndSavingRequestAsync(int ideaId, string recipientId)
+        public async Task SendMilestoneAndSavingRequestAsync(string ideaId, string recipientId)
         {
             var idea = await _context.Ideas.FindAsync(ideaId);
             if (idea == null) return;
@@ -227,7 +227,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "MILESTONE_SAVING_REQUEST",
                 Title = "Action Required: Milestone & Saving Plan",
-                Message = $"Please create a milestone and input the saving plan for the idea '{idea.IdeaName}' (Code: {idea.IdeaCode}).",
+                Message = $"Please create a milestone and input the saving plan for the idea '{idea.IdeaName}' (Code: {idea.Id}).",
                 Priority = "High",
                 ActionUrl = $"/idea/details/{ideaId}#monitoring"
             };
@@ -235,7 +235,7 @@ namespace Ideku.Services
             await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
 
-        public async Task SendCompletionRequestAsync(int ideaId, string recipientId)
+        public async Task SendCompletionRequestAsync(string ideaId, string recipientId)
         {
             var idea = await _context.Ideas.FindAsync(ideaId);
             if (idea == null) return;
@@ -249,7 +249,7 @@ namespace Ideku.Services
                 IdeaId = ideaId,
                 NotificationType = "COMPLETION_REQUEST",
                 Title = "Action Required: Complete Idea",
-                Message = $"Please mark the idea '{idea.IdeaName}' (Code: {idea.IdeaCode}) as complete.",
+                Message = $"Please mark the idea '{idea.IdeaName}' (Code: {idea.Id}) as complete.",
                 Priority = "High",
                 ActionUrl = $"/idea/details/{ideaId}#complete"
             };

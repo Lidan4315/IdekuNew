@@ -56,7 +56,7 @@ namespace Ideku.Services
             return await _ideaRepository.GetByInitiatorAsync(initiator);
         }
 
-        public async Task<Idea?> GetIdeaByIdAsync(int id)
+        public async Task<Idea?> GetIdeaByIdAsync(string id)
         {
             return await _ideaRepository.GetByIdAsync(id);
         }
@@ -73,7 +73,7 @@ namespace Ideku.Services
             await _ideaRepository.UpdateAsync(idea);
         }
 
-        public async Task DeleteIdeaAsync(int id)
+        public async Task DeleteIdeaAsync(string id)
         {
             await _ideaRepository.DeleteAsync(id);
         }
@@ -124,23 +124,11 @@ namespace Ideku.Services
                 return (false, null, errors);
             }
 
-            var attachmentFileNames = new List<string>();
-            if (model.AttachmentFiles != null)
-            {
-                int fileIndex = 1;
-                foreach (var file in model.AttachmentFiles)
-                {
-                    var savedFileName = await _fileService.SaveFileAsync(file, model.BadgeNumber, 0, fileIndex++);
-                    if (savedFileName != null)
-                    {
-                        attachmentFileNames.Add(savedFileName);
-                    }
-                }
-            }
-
             var idea = new Idea
             {
-                AttachmentFiles = attachmentFileNames.Any() ? string.Join(";", attachmentFileNames) : null,
+                Id = await _ideaCodeService.GenerateNextIdeaCodeAsync(), // Generate and assign the unique ID here
+                // AttachmentFiles will be added after we get the Idea ID
+                AttachmentFiles = null,
                 InitiatorId = model.BadgeNumber,
                 TargetDivisionId = model.ToDivision,
                 TargetDepartmentId = model.ToDepartment,
@@ -151,8 +139,7 @@ namespace Ideku.Services
                 Solution = model.IdeaSolution,
                 SavingCost = model.SavingCost.Value,
                 Status = "Under Review",
-                CurrentStage = 0,
-                IdeaCode = await _ideaCodeService.GenerateNextIdeaCodeAsync()
+                CurrentStage = 0
             };
 
             var threshold = await GetHighValueThresholdAsync();
@@ -169,13 +156,35 @@ namespace Ideku.Services
 
             var createdIdea = await CreateIdeaAsync(idea);
 
+            // Now that we have an ID, we can save the files with the correct name
+            if (model.AttachmentFiles != null && model.AttachmentFiles.Any())
+            {
+                var attachmentFileNames = new List<string>();
+                int fileIndex = 1;
+                foreach (var file in model.AttachmentFiles)
+                {
+                    // Use the newly created Idea's ID for the filename
+                    var savedFileName = await _fileService.SaveFileAsync(file, createdIdea.Id, createdIdea.CurrentStage, fileIndex++);
+                    if (savedFileName != null)
+                    {
+                        attachmentFileNames.Add(savedFileName);
+                    }
+                }
+
+                if (attachmentFileNames.Any())
+                {
+                    createdIdea.AttachmentFiles = string.Join(";", attachmentFileNames);
+                    await UpdateIdeaAsync(createdIdea); // Save the updated filenames to the DB
+                }
+            }
+
             // Initiate the workflow to send the first notification
             await _workflowService.InitiateWorkflowAsync(createdIdea);
 
             return (true, createdIdea, errors);
         }
 
-        public async Task<(bool Success, List<string> Errors)> UpdateIdeaFromViewModelAsync(int id, IdeaCreateViewModel model, string currentUser)
+        public async Task<(bool Success, List<string> Errors)> UpdateIdeaFromViewModelAsync(string id, IdeaCreateViewModel model, string currentUser)
         {
             var errors = new List<string>();
             var existingIdea = await GetIdeaByIdAsync(id);
@@ -216,13 +225,14 @@ namespace Ideku.Services
                 int fileIndex = 1;
                 foreach (var file in model.AttachmentFiles)
                 {
-                    var savedFileName = await _fileService.SaveFileAsync(file, model.BadgeNumber, 0, fileIndex++);
+                    // Use the existing Idea's ID for the filename
+                    var savedFileName = await _fileService.SaveFileAsync(file, existingIdea.Id, existingIdea.CurrentStage, fileIndex++);
                     if (savedFileName != null)
                     {
                         attachmentFileNames.Add(savedFileName);
                     }
                 }
-            existingIdea.AttachmentFiles = string.Join(";", attachmentFileNames);
+                existingIdea.AttachmentFiles = string.Join(";", attachmentFileNames);
             }
 
             existingIdea.InitiatorId = model.BadgeNumber;

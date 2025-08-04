@@ -26,10 +26,6 @@
                             <div class="truncate-title" title="@idea.IdeaName">
                                 @idea.IdeaName
                             </div>
-                            @if (!string.IsNullOrEmpty(idea.IdeaCode))
-                            {
-                                <small class="text-muted">Code: @idea.IdeaCode</small>
-                            }
                         </td>
                         <td>
                             @if (idea.SavingCost > 0)

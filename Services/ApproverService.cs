@@ -16,7 +16,7 @@ namespace Ideku.Services
             _logger = logger;
         }
 
-        public async Task<Employee?> GetNextApproverAsync(int ideaId, int nextStage)
+        public async Task<Employee?> GetNextApproverAsync(string ideaId, int nextStage)
         {
             var idea = await _context.Ideas
                 .Include(i => i.TargetDivision)

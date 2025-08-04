@@ -12,8 +12,8 @@ namespace Ideku.Models.Entities
         public int Id { get; set; }
 
         [Required]
-        [Column("idea_id")]
-        public int IdeaId { get; set; }
+        [Column("idea_id", TypeName = "varchar(20)")]
+        public string IdeaId { get; set; }
         [ForeignKey("IdeaId")]
         public Idea Idea { get; set; } = null!;
 
