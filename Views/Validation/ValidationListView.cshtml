@@ -74,7 +74,7 @@
                             <th>Delete</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="idea-table-body">
                         @foreach (var idea in Model.PendingIdeas)
                         {
                             <tr style="cursor: pointer;" onclick="window.location='@Url.Action("Review", "Validation", new { id = idea.Id })'">

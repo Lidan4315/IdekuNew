@@ -6,6 +6,9 @@ using Ideku.Models.ViewModels.Validation;
 using Ideku.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace Ideku.Controllers
 {
@@ -16,22 +19,122 @@ namespace Ideku.Controllers
         private readonly AuthService _authService;
         private readonly WorkflowService _workflowService;
         private readonly ILogger<ValidationController> _logger;
+        private readonly ICompositeViewEngine _viewEngine;
+        private readonly OrganizationService _organizationService;
+        private readonly AppDbContext _context;
 
         public ValidationController(
             IdeaService ideaService,
             AuthService authService,
             WorkflowService workflowService,
-            ILogger<ValidationController> logger)
+            ILogger<ValidationController> logger,
+            ICompositeViewEngine viewEngine,
+            OrganizationService organizationService,
+            AppDbContext context)
         {
             _ideaService = ideaService;
             _authService = authService;
             _workflowService = workflowService;
             _logger = logger;
+            _viewEngine = viewEngine;
+            _organizationService = organizationService;
+            _context = context;
+        }
+
+        // GET: /Validation/FilterIdeas - AJAX endpoint for filtering ideas
+        [HttpGet]
+        public async Task<IActionResult> FilterIdeas(string searchString, string selectedDivision, string selectedDepartment, string selectedStatus, string selectedStage, int pageNumber = 1)
+        {
+            var (user, isAuthorized) = await CheckValidationPermissionAsync();
+            if (user == null || !isAuthorized)
+            {
+                return Json(new { success = false, message = "Unauthorized" });
+            }
+
+            var pendingIdeaIds = (await _workflowService.GetPendingApprovalsForUserAsync(user.EmployeeId)).Select(i => i.Id);
+            var query = _context.Ideas
+                                .Include(i => i.Initiator)
+                                .Include(i => i.TargetDivision)
+                                .Include(i => i.TargetDepartment)
+                                .Include(i => i.Category)
+                                .Where(i => pendingIdeaIds.Contains(i.Id));
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                var upperSearchString = searchString.ToUpper();
+                bool isNumeric = int.TryParse(searchString, out int numericId);
+                query = query.Where(i =>
+                    (i.IdeaName != null && i.IdeaName.ToUpper().Contains(upperSearchString)) ||
+                    (i.Initiator != null && i.Initiator.Name.ToUpper().Contains(upperSearchString)) ||
+                    (i.IdeaCode != null && i.IdeaCode.ToUpper().Contains(upperSearchString)) ||
+                    (isNumeric && i.Id == numericId)
+                );
+            }
+
+            if (!string.IsNullOrEmpty(selectedDivision))
+            {
+                query = query.Where(i => i.TargetDivisionId == selectedDivision);
+            }
+
+            if (!string.IsNullOrEmpty(selectedDepartment))
+            {
+                query = query.Where(i => i.TargetDepartmentId == selectedDepartment);
+            }
+
+            if (!string.IsNullOrEmpty(selectedStatus))
+            {
+                query = query.Where(i => i.Status == selectedStatus);
+            }
+
+            if (!string.IsNullOrEmpty(selectedStage))
+            {
+                query = query.Where(i => i.CurrentStage.ToString() == selectedStage);
+            }
+
+            var pageSize = 10;
+            var totalItems = query.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var pagedIdeas = query
+                .OrderByDescending(i => i.SubmittedDate)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var viewModel = new ValidationListViewModel
+            {
+                PendingIdeas = pagedIdeas.Select(idea => new ValidationIdeaViewModel
+                {
+                    Id = idea.Id,
+                    IdeaName = idea.IdeaName,
+                    InitiatorName = idea.Initiator?.Name,
+                    DivisionName = idea.TargetDivision?.NamaDivisi,
+                    DepartmentName = idea.TargetDepartment?.NamaDepartement,
+                    CategoryName = idea.Category?.NamaCategory,
+                    CurrentStage = idea.CurrentStage,
+                    CurrentStatus = idea.Status,
+                    SavingCost = idea.SavingCost,
+                    SubmittedDate = idea.SubmittedDate
+                }).ToList(),
+                CurrentPage = pageNumber,
+                TotalPages = totalPages,
+                // Pass filter values back to the view to maintain state in pagination links
+                SearchString = searchString,
+                SelectedDivision = selectedDivision,
+                SelectedDepartment = selectedDepartment,
+                SelectedStatus = selectedStatus,
+                SelectedStage = !string.IsNullOrEmpty(selectedStage) ? int.Parse(selectedStage) : null
+            };
+
+            var tableHtml = await RenderViewToStringAsync("_IdeaListPartial", viewModel.PendingIdeas);
+            var paginationHtml = await RenderViewToStringAsync("_PaginationPartial", viewModel);
+
+            return Json(new { tableHtml, paginationHtml });
         }
 
         // GET: /Validation/List - List all ideas pending validation for the current user
         [HttpGet]
-        public async Task<IActionResult> List()
+        public async Task<IActionResult> List(string searchString, string selectedDivision, string selectedDepartment, string selectedStatus, string selectedStage, int pageNumber = 1)
         {
             try
             {
@@ -42,12 +145,62 @@ namespace Ideku.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
-                // Get only the ideas pending for this specific user, according to our corrected workflow logic
-                var pendingIdeas = await _workflowService.GetPendingApprovalsForUserAsync(user.EmployeeId);
+                // Get base query of ideas pending for this user
+                var pendingIdeaIds = (await _workflowService.GetPendingApprovalsForUserAsync(user.EmployeeId)).Select(i => i.Id);
+                var query = _context.Ideas
+                                    .Include(i => i.Initiator)
+                                    .Include(i => i.TargetDivision)
+                                    .Include(i => i.TargetDepartment)
+                                    .Include(i => i.Category)
+                                    .Where(i => pendingIdeaIds.Contains(i.Id));
+
+                // Apply filters
+                if (!string.IsNullOrEmpty(searchString))
+                {
+                    var upperSearchString = searchString.ToUpper();
+                    bool isNumeric = int.TryParse(searchString, out int numericId);
+                    query = query.Where(i =>
+                        (i.IdeaName != null && i.IdeaName.ToUpper().Contains(upperSearchString)) ||
+                        (i.Initiator != null && i.Initiator.Name.ToUpper().Contains(upperSearchString)) ||
+                        (i.IdeaCode != null && i.IdeaCode.ToUpper().Contains(upperSearchString)) ||
+                        (isNumeric && i.Id == numericId)
+                    );
+                }
+                if (!string.IsNullOrEmpty(selectedDivision))
+                {
+                    query = query.Where(i => i.TargetDivisionId == selectedDivision);
+                }
+                if (!string.IsNullOrEmpty(selectedDepartment))
+                {
+                    query = query.Where(i => i.TargetDepartmentId == selectedDepartment);
+                }
+                if (!string.IsNullOrEmpty(selectedStatus))
+                {
+                    query = query.Where(i => i.Status == selectedStatus);
+                }
+                if (!string.IsNullOrEmpty(selectedStage))
+                {
+                    query = query.Where(i => i.CurrentStage.ToString() == selectedStage);
+                }
+
+                // Apply pagination
+                var pageSize = 10;
+                var totalItems = query.Count();
+                var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+                var pagedIdeas = query
+                    .OrderByDescending(i => i.SubmittedDate)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                // Get data for filter dropdowns
+                var divisions = await _organizationService.GetAllDivisionsAsync();
+                var statuses = new List<string> { "Submitted", "Under Review", "Approved", "Rejected", "Completed" }.Select(s => new SelectListItem { Value = s, Text = s }).ToList();
+                var stages = new List<int> { 1, 2, 3, 4, 5, 6 }.Select(s => new SelectListItem { Value = s.ToString(), Text = $"Stage {s}" }).ToList();
 
                 var viewModel = new ValidationListViewModel
                 {
-                    PendingIdeas = pendingIdeas.Select(idea => new ValidationIdeaViewModel
+                    PendingIdeas = pagedIdeas.Select(idea => new ValidationIdeaViewModel
                     {
                         Id = idea.Id,
                         IdeaName = idea.IdeaName,
@@ -60,7 +213,20 @@ namespace Ideku.Controllers
                         SavingCost = idea.SavingCost,
                         SubmittedDate = idea.SubmittedDate
                     }).ToList(),
-                    ValidatorName = user.Name
+                    ValidatorName = user.Name,
+                    // Filter data and selected values
+                    Divisions = divisions.Select(d => new SelectListItem { Value = d.Id, Text = d.NamaDivisi }).ToList(),
+                    Departments = new List<SelectListItem>(), // Populated by JS
+                    Statuses = statuses,
+                    Stages = stages,
+                    SearchString = searchString,
+                    SelectedDivision = selectedDivision,
+                    SelectedDepartment = selectedDepartment,
+                    SelectedStatus = selectedStatus,
+                    SelectedStage = !string.IsNullOrEmpty(selectedStage) ? int.Parse(selectedStage) : null,
+                    // Pagination data
+                    CurrentPage = pageNumber,
+                    TotalPages = totalPages
                 };
 
                 return View("ValidationListView", viewModel);
@@ -201,6 +367,36 @@ namespace Ideku.Controllers
             {
                 _logger.LogError(ex, $"Error rejecting idea {id}");
                 return Json(new { success = false, message = "An error occurred while rejecting the idea." });
+            }
+        }
+
+        private async Task<string> RenderViewToStringAsync(string viewName, object model)
+        {
+            if (string.IsNullOrEmpty(viewName))
+            {
+                viewName = ControllerContext.ActionDescriptor.ActionName;
+            }
+            ViewData.Model = model;
+            using (var writer = new StringWriter())
+            {
+                IViewEngine viewEngine = _viewEngine ?? HttpContext.RequestServices.GetService(typeof(ICompositeViewEngine)) as ICompositeViewEngine;
+                ViewEngineResult viewResult = viewEngine.FindView(ControllerContext, viewName, false);
+
+                if (viewResult.View == null)
+                {
+                    throw new ArgumentNullException($"{viewName} does not match any available view");
+                }
+
+                var viewContext = new ViewContext(
+                    ControllerContext,
+                    viewResult.View,
+                    ViewData,
+                    TempData,
+                    writer,
+                    new HtmlHelperOptions()
+                );
+                await viewResult.View.RenderAsync(viewContext);
+                return writer.GetStringBuilder().ToString();
             }
         }
 
