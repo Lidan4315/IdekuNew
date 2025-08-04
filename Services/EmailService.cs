@@ -16,7 +16,7 @@ namespace Ideku.Services
             _logger = logger;
         }
 
-        public async Task<bool> SendIdeaSubmissionNotificationAsync(string ideaTitle, string submitterName, string submitterId, int ideaId, List<string> validatorEmails)
+        public async Task<bool> SendIdeaSubmissionNotificationAsync(string ideaTitle, string submitterName, string submitterId, string ideaId, List<string> validatorEmails)
         {
             try
             {
@@ -93,7 +93,7 @@ namespace Ideku.Services
             await client.SendMailAsync(mailMessage);
         }
 
-        private string GenerateValidationEmailBody(string ideaTitle, string submitterName, string submitterId, int ideaId)
+        private string GenerateValidationEmailBody(string ideaTitle, string submitterName, string submitterId, string ideaId)
         {
             var baseUrl = _emailSettings.BaseUrl;
             var validationUrl = $"{baseUrl}/Validation/Review/{ideaId}";

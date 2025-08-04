@@ -58,8 +58,9 @@ namespace Ideku.Migrations
                         .HasColumnType("nvarchar(1000)")
                         .HasColumnName("comments");
 
-                    b.Property<int>("IdeaId")
-                        .HasColumnType("int")
+                    b.Property<string>("IdeaId")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
                         .HasColumnName("idea_id");
 
                     b.Property<string>("IpAddress")
@@ -242,12 +243,9 @@ namespace Ideku.Migrations
 
             modelBuilder.Entity("Ideku.Models.Entities.Idea", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                    b.Property<string>("Id")
+                        .HasColumnType("varchar(20)")
                         .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AttachmentFiles")
                         .HasColumnType("nvarchar(max)")
@@ -268,11 +266,6 @@ namespace Ideku.Migrations
                     b.Property<int?>("EventId")
                         .HasColumnType("int")
                         .HasColumnName("event_id");
-
-                    b.Property<string>("IdeaCode")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("idea_code");
 
                     b.Property<string>("IdeaName")
                         .IsRequired()
@@ -350,10 +343,6 @@ namespace Ideku.Migrations
 
                     b.HasIndex("EventId");
 
-                    b.HasIndex("IdeaCode")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Ideas_IdeaCode");
-
                     b.HasIndex("TargetDepartmentId");
 
                     b.HasIndex("TargetDivisionId");
@@ -393,8 +382,9 @@ namespace Ideku.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("created_date");
 
-                    b.Property<int>("IdeaId")
-                        .HasColumnType("int")
+                    b.Property<string>("IdeaId")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
                         .HasColumnName("idea_id");
 
                     b.Property<string>("MilestoneDescription")
@@ -465,8 +455,8 @@ namespace Ideku.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("email_sent_date");
 
-                    b.Property<int?>("IdeaId")
-                        .HasColumnType("int")
+                    b.Property<string>("IdeaId")
+                        .HasColumnType("varchar(20)")
                         .HasColumnName("idea_id");
 
                     b.Property<bool>("IsEmailSent")
@@ -628,8 +618,9 @@ namespace Ideku.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("created_date");
 
-                    b.Property<int>("IdeaId")
-                        .HasColumnType("int")
+                    b.Property<string>("IdeaId")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)")
                         .HasColumnName("idea_id");
 
                     b.Property<string>("MonitoringNotes")

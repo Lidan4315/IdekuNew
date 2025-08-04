@@ -9,7 +9,7 @@ namespace Ideku.Services
             _webHostEnvironment = webHostEnvironment;
         }
 
-        public async Task<string?> SaveFileAsync(IFormFile file, string idImplementor, int currentStage, int fileIndex)
+        public async Task<string?> SaveFileAsync(IFormFile file, string ideaId, int currentStage, int fileIndex)
         {
             if (file == null || file.Length == 0)
                 return null;
@@ -25,14 +25,14 @@ namespace Ideku.Services
 
             var fileExtension = Path.GetExtension(file.FileName);
             var tempFileIndex = fileIndex;
-            var fileName = $"{idImplementor}_{stageString}_{tempFileIndex:D3}{fileExtension}";
+            var fileName = $"{ideaId}_{stageString}_{tempFileIndex:D3}{fileExtension}";
             var filePath = Path.Combine(uploadPath, fileName);
 
             // Handle potential file name conflicts by incrementing the index
             while (File.Exists(filePath))
             {
                 tempFileIndex++;
-                fileName = $"{idImplementor}_{stageString}_{tempFileIndex:D3}{fileExtension}";
+                fileName = $"{ideaId}_{stageString}_{tempFileIndex:D3}{fileExtension}";
                 filePath = Path.Combine(uploadPath, fileName);
             }
 

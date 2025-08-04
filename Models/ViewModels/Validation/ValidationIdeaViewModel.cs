@@ -4,7 +4,7 @@ namespace Ideku.Models.ViewModels.Validation
 {
     public class ValidationIdeaViewModel
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string? IdeaName { get; set; }
         public string? InitiatorName { get; set; }
         public string? DivisionName { get; set; }

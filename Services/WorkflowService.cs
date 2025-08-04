@@ -56,7 +56,7 @@ namespace Ideku.Services
             }
         }
 
-        public async Task<bool> AdvanceStageAsync(int ideaId, string approverId, string comments = null, decimal? validatedSavingCost = null)
+        public async Task<bool> AdvanceStageAsync(string ideaId, string approverId, string comments = null, decimal? validatedSavingCost = null)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             
@@ -142,7 +142,7 @@ namespace Ideku.Services
             }
         }
 
-        public async Task<bool> RejectIdeaAsync(int ideaId, string approverId, string rejectReason)
+        public async Task<bool> RejectIdeaAsync(string ideaId, string approverId, string rejectReason)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             
@@ -199,7 +199,7 @@ namespace Ideku.Services
             }
         }
 
-        public async Task<bool> RequestMoreInfoAsync(int ideaId, string approverId, string infoRequest)
+        public async Task<bool> RequestMoreInfoAsync(string ideaId, string approverId, string infoRequest)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             

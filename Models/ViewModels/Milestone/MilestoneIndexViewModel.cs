@@ -8,6 +8,6 @@ namespace Ideku.Models.ViewModels.Milestone
         public Entities.Idea Idea { get; set; }
         public List<IdeaMilestone> Milestones { get; set; }
         public SavingMonitoring SavingMonitoring { get; set; }
-        public int IdeaId { get; set; }
+        public string IdeaId { get; set; }
     }
 }

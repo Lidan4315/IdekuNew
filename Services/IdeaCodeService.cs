@@ -15,9 +15,9 @@ namespace Ideku.Services
         public async Task<string> GenerateNextIdeaCodeAsync()
         {
             var latestCode = await _context.Ideas
-                .Where(i => i.IdeaCode.StartsWith("IMS-"))
-                .OrderByDescending(i => i.IdeaCode)
-                .Select(i => i.IdeaCode)
+                .Where(i => i.Id.StartsWith("IMS-"))
+                .OrderByDescending(i => i.Id)
+                .Select(i => i.Id)
                 .FirstOrDefaultAsync();
 
             int nextNumber = 1;

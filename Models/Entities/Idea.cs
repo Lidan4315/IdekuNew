@@ -8,12 +8,8 @@ namespace Ideku.Models.Entities
     public class Idea
     {
         [Key]
-        [Column("id")]
-        public int Id { get; set; }
-
-        [Required]
-        [Column("idea_code", TypeName = "varchar(20)")]
-        public string IdeaCode { get; set; } = string.Empty; // IMS-00001 format
+        [Column("id", TypeName = "varchar(20)")]
+        public string Id { get; set; } = string.Empty; // This will now hold values like "IMS-00001"
 
         [Required]
         [Column("initiator_id", TypeName = "varchar(10)")]

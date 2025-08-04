@@ -200,10 +200,6 @@ namespace Ideku.Data.Context
                 .HasIndex(i => new { i.Status, i.CurrentStage })
                 .HasDatabaseName("IX_Ideas_Status_Stage");
 
-            modelBuilder.Entity<Idea>()
-                .HasIndex(i => i.IdeaCode)
-                .IsUnique()
-                .HasDatabaseName("IX_Ideas_IdeaCode");
 
             // Approval History indexes
             modelBuilder.Entity<ApprovalHistory>()
