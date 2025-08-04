@@ -60,10 +60,11 @@ namespace Ideku.Models.ViewModels.Idea
         [Required(ErrorMessage = "Saving Cost is required")]
         [Range(0.01, double.MaxValue, ErrorMessage = "Saving Cost must be greater than 0")]
         [Display(Name = "Saving Cost (USD)")]
-        public decimal SavingCost { get; set; }
+        public decimal? SavingCost { get; set; }
 
-        // 🔥 Attachment remains OPTIONAL
+        // 🔥 Attachment is now REQUIRED
+        [Required(ErrorMessage = "At least one attachment is required")]
         [Display(Name = "Attachments")]
-        public List<IFormFile>? AttachmentFiles { get; set; }
+        public List<IFormFile> AttachmentFiles { get; set; } = new();
     }
 }

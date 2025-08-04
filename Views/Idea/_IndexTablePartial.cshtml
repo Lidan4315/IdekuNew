@@ -7,12 +7,13 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th style="min-width: 350px;">Title</th>
-                    <th>Category</th>
-                    <th>Event</th>
+                    <th style="min-width: 300px;">Title</th>
                     <th>Saving Cost</th>
+                    <th>Saving Cost Validated</th>
+                    <th>Stage</th>
                     <th>Status</th>
-                    <th>Submitted</th>
+                    <th style="min-width: 150px;">Progress</th>
+                    <th>Submission Date</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -31,26 +32,6 @@
                             }
                         </td>
                         <td>
-                            @if (idea.Category != null)
-                            {
-                                <span class="badge bg-info">@idea.Category.NamaCategory</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td>
-                            @if (idea.Event != null)
-                            {
-                                <span class="badge bg-secondary">@idea.Event.NamaEvent</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">-</span>
-                            }
-                        </td>
-                        <td>
                             @if (idea.SavingCost > 0)
                             {
                                 <span class="fw-bold text-success">@idea.SavingCost.ToString("N0")</span>
@@ -59,6 +40,19 @@
                             {
                                 <span class="text-muted">-</span>
                             }
+                        </td>
+                        <td>
+                            @if (idea.ValidatedSavingCost.HasValue && idea.ValidatedSavingCost > 0)
+                            {
+                                <span class="fw-bold text-primary">@idea.ValidatedSavingCost.Value.ToString("N0")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">S@(idea.CurrentStage)</span>
                         </td>
                         <td>
                             @{
@@ -75,7 +69,15 @@
                             <span class="badge @statusClass">@idea.Status</span>
                         </td>
                         <td>
-                            <div>@idea.SubmittedDate.ToString("MMM dd")</div>
+                            @{
+                                var progress = 50; // Placeholder
+                            }
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: @(progress)%;" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100">@progress%</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>@idea.SubmittedDate.ToString("MMM dd, yyyy")</div>
                             <small class="text-muted">@idea.SubmittedDate.ToString("HH:mm")</small>
                         </td>
                         <td>

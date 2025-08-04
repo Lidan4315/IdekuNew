@@ -613,3 +613,85 @@ body {
     color: #721c24;
     border-left: 4px solid #dc3545;
 }
+
+/* Styles from ValidationListView */
+.page-header h1 {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.filter-card .form-control,
+.filter-card .form-select {
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 2.25rem;
+}
+
+.table-card .card-body {
+    padding: 0;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom-width: 1px;
+    font-weight: 600;
+    color: #495057;
+    padding: 1rem;
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+.truncate-title {
+    max-width: 350px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pagination-modern .page-item .page-link {
+    border: none;
+    border-radius: 50%;
+    margin: 0 3px;
+    color: #495057;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.pagination-modern .page-item .page-link:hover {
+    background-color: #e9ecef;
+    color: #0d6efd;
+}
+
+.pagination-modern .page-item.active .page-link {
+    background-color: transparent;
+    color: #6ea8fe;
+    border: 1px solid #6ea8fe;
+}
+
+.pagination-modern .page-item.disabled .page-link {
+    color: #adb5bd;
+    background-color: transparent;
+}
+
+.pagination-modern .page-item:first-child .page-link,
+.pagination-modern .page-item:last-child .page-link {
+    border-radius: 15px;
+}

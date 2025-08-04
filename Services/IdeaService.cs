@@ -149,7 +149,7 @@ namespace Ideku.Services
                 IdeaName = model.IdeaName,
                 IssueBackground = model.IdeaIssueBackground,
                 Solution = model.IdeaSolution,
-                SavingCost = model.SavingCost,
+                SavingCost = model.SavingCost.Value,
                 Status = "Under Review",
                 CurrentStage = 0,
                 IdeaCode = await _ideaCodeService.GenerateNextIdeaCodeAsync()
@@ -233,7 +233,7 @@ namespace Ideku.Services
             existingIdea.IdeaName = model.IdeaName;
             existingIdea.IssueBackground = model.IdeaIssueBackground;
             existingIdea.Solution = model.IdeaSolution;
-            existingIdea.SavingCost = model.SavingCost;
+            existingIdea.SavingCost = model.SavingCost.Value;
 
             await UpdateIdeaAsync(existingIdea);
 
