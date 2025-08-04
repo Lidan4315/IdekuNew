@@ -7,10 +7,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let debounceTimeout;
 
     // --- REAL-TIME FILTERING LOGIC ---
-    filterInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(applyFilters, 300); // Debounce to avoid rapid firing
+    document.getElementById('searchString').addEventListener('input', function () {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => applyFilters(1), 300);
+    });
+
+    // Generic handler for dropdowns that DON'T affect others
+    document.querySelectorAll('#selectedDepartment, #selectedStatus, #selectedStage').forEach(select => {
+        select.addEventListener('change', function () {
+            applyFilters(1);
         });
     });
 
@@ -58,9 +63,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- PAGINATION CLICK HANDLING ---
     if (paginationContainer) {
         paginationContainer.addEventListener('click', function (e) {
-            if (e.target.tagName === 'A' && e.target.classList.contains('page-link')) {
+            const pageLink = e.target.closest('a.page-link');
+            if (pageLink) {
                 e.preventDefault();
-                const page = e.target.getAttribute('data-page');
+                const page = pageLink.getAttribute('data-page');
                 if (page) {
                     applyFilters(page);
                 }
@@ -73,21 +79,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const departmentSelect = document.getElementById('selectedDepartment');
 
     if (divisionSelect && departmentSelect) {
-        divisionSelect.addEventListener('change', function() {
+        divisionSelect.addEventListener('change', function () {
             const divisionId = this.value;
-            departmentSelect.innerHTML = '<option value="">Loading...</option>';
-            departmentSelect.disabled = true;
+
+            // Always reset the department dropdown when the division changes.
+            departmentSelect.innerHTML = '<option value="">All</option>';
+            departmentSelect.value = ''; // Ensure value is cleared for the filter function
 
             if (!divisionId) {
-                departmentSelect.innerHTML = '<option value="">All</option>';
-                departmentSelect.disabled = false;
+                // If "All Divisions" is selected, just trigger the filter.
+                applyFilters(1);
                 return;
             }
+
+            // If a specific division is selected, fetch its departments.
+            departmentSelect.innerHTML = '<option value="">Loading...</option>';
+            departmentSelect.disabled = true;
 
             fetch(`/Idea/GetDepartmentsByDivision?divisionId=${divisionId}`)
                 .then(response => response.json())
                 .then(data => {
-                    departmentSelect.innerHTML = '<option value="">All</option>';
+                    departmentSelect.innerHTML = '<option value="">All</option>'; // Reset again after loading
                     if (data.success) {
                         data.data.forEach(dept => {
                             const option = document.createElement('option');
@@ -96,12 +108,15 @@ document.addEventListener('DOMContentLoaded', function () {
                             departmentSelect.appendChild(option);
                         });
                     }
-                    departmentSelect.disabled = false;
                 })
                 .catch(error => {
                     console.error('Error fetching departments:', error);
                     departmentSelect.innerHTML = '<option value="">Error</option>';
+                })
+                .finally(() => {
                     departmentSelect.disabled = false;
+                    // Trigger a filter update now that the departments are loaded.
+                    applyFilters(1);
                 });
         });
     }

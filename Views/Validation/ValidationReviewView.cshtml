@@ -19,133 +19,111 @@
 </div>
 
 <div class="row">
-    <div class="col-lg-8">
-        <!-- Idea Details Card -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>@Model.IdeaName</h5>
-            </div>
+    <div class="col-12">
+        <div class="card">
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <strong>Idea ID:</strong>
-                        <span class="badge bg-light text-dark">#@Model.IdeaId</span>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Current Status:</strong>
-                        <span class="badge bg-warning">@Model.CurrentStatus</span>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <strong>Submitted by:</strong>
-                        <span>@Model.SubmitterName (@Model.SubmitterId)</span>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Submitted Date:</strong>
-                        <span>@Model.SubmittedDate.ToString("MMMM dd, yyyy HH:mm")</span>
-                    </div>
-                </div>
-                <div class="row mb-3">
+                <div class="form-section">
+                    <h5 class="section-title"><i class="bi bi-lightbulb me-2"></i>Idea Details</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Idea ID</label>
+                            <input type="text" class="form-control" value="#@Model.IdeaId" disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Status</label>
+                            <input type="text" class="form-control" value="@Model.CurrentStatus" disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Submitted by</label>
+                            <input type="text" class="form-control" value="@Model.SubmitterName (@Model.SubmitterId)" disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Submitted Date</label>
+                            <input type="text" class="form-control" value="@Model.SubmittedDate.ToString("MMMM dd, yyyy HH:mm")" disabled />
+                        </div>
                         @if (!string.IsNullOrEmpty(Model.Division))
                         {
-                            <div class="col-md-6">
-                                <strong>Division:</strong>
-                                <span>@Model.Division</span>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Division</label>
+                                <input type="text" class="form-control" value="@Model.Division" disabled />
                             </div>
                         }
                         @if (!string.IsNullOrEmpty(Model.Department))
                         {
-                            <div class="col-md-6">
-                                <strong>Department:</strong>
-                                <span>@Model.Department</span>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Department</label>
+                                <input type="text" class="form-control" value="@Model.Department" disabled />
                             </div>
                         }
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(Model.CategoryName) || !string.IsNullOrEmpty(Model.EventName))
-                {
-                    <div class="row mb-3">
                         @if (!string.IsNullOrEmpty(Model.CategoryName))
                         {
-                            <div class="col-md-6">
-                                <strong>Category:</strong>
-                                <span class="badge bg-info">@Model.CategoryName</span>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Category</label>
+                                <input type="text" class="form-control" value="@Model.CategoryName" disabled />
                             </div>
                         }
                         @if (!string.IsNullOrEmpty(Model.EventName))
                         {
-                            <div class="col-md-6">
-                                <strong>Event:</strong>
-                                <span class="badge bg-secondary">@Model.EventName</span>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Event</label>
+                                <input type="text" class="form-control" value="@Model.EventName" disabled />
                             </div>
                         }
                     </div>
-                }
-
-                @if (!string.IsNullOrEmpty(Model.IdeaIssueBackground))
-                {
-                    <div class="mb-4">
-                        <h6><i class="bi bi-exclamation-triangle me-2"></i>Problem/Issue Background</h6>
-                        <p class="text-muted">@Model.IdeaIssueBackground</p>
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(Model.IdeaSolution))
-                {
-                    <div class="mb-4">
-                        <h6><i class="bi bi-gear me-2"></i>Proposed Solution</h6>
-                        <p class="text-muted">@Model.IdeaSolution</p>
-                    </div>
-                }
-
-                @if (Model.SavingCost.HasValue)
-                {
-                    <div class="mb-4">
-                        <h6><i class="bi bi-currency-dollar me-2"></i>Financial Impact</h6>
-                        <p class="fw-bold text-success fs-5">@Model.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))</p>
-                        <small class="text-muted">Estimated cost savings (as claimed by submitter)</small>
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(Model.AttachmentFile))
-                {
-                    <div class="mb-4">
-                        <h6><i class="bi bi-paperclip me-2"></i>Lampiran</h6>
-                        <ul class="list-group">
-                            @foreach (var file in Model.AttachmentFile.Split(';', StringSplitOptions.RemoveEmptyEntries))
-                            {
-                                var originalFileName = file.Length > 37 ? file.Substring(37) : file;
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>@originalFileName</span>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm view-attachment-btn" 
-                                                data-url="@Url.Action("ViewAttachment", "Idea", new { filename = file, ideaId = Model.IdeaId })"
-                                                data-filename="@originalFileName">
-                                            <i class="bi bi-eye me-1"></i> Lihat
-                                        </button>
-                                        <a asp-controller="Idea" asp-action="Download" asp-route-filename="@file" asp-route-ideaId="@Model.IdeaId"
-                                           class="btn btn-outline-primary btn-sm">
-                                            <i class="bi bi-download me-1"></i> Unduh
-                                        </a>
-                                    </div>
-                                </li>
-                            }
-                        </ul>
-                        <div class="mt-3">
-                            <a asp-controller="Idea" asp-action="DownloadAll" asp-route-ideaId="@Model.IdeaId" class="btn btn-primary">
-                                <i class="bi bi-file-zip me-2"></i>Unduh Semua Lampiran
-                            </a>
+                    @if (!string.IsNullOrEmpty(Model.IdeaIssueBackground))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Problem/Issue Background</label>
+                            <textarea class="form-control" rows="4" disabled>@Model.IdeaIssueBackground</textarea>
                         </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.IdeaSolution))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Proposed Solution</label>
+                            <textarea class="form-control" rows="4" disabled>@Model.IdeaSolution</textarea>
+                        </div>
+                    }
+                    <div class="row">
+                        @if (Model.SavingCost.HasValue)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Financial Impact</label>
+                                <input type="text" class="form-control" value="@Model.SavingCost.Value.ToString("C", new System.Globalization.CultureInfo("en-US"))" disabled />
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.AttachmentFile))
+                        {
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Attachments</label>
+                                <ul class="list-group">
+                                    @foreach (var file in Model.AttachmentFile.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        var originalFileName = file.Length > 37 ? file.Substring(37) : file;
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>@originalFileName</span>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm view-attachment-btn"
+                                                        data-url="@Url.Action("ViewAttachment", "Idea", new { filename = file, ideaId = Model.IdeaId })"
+                                                        data-filename="@originalFileName">
+                                                    <i class="bi bi-eye me-1"></i> Lihat
+                                                </button>
+                                                <a asp-controller="Idea" asp-action="Download" asp-route-filename="@file" asp-route-ideaId="@Model.IdeaId"
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="bi bi-download me-1"></i> Unduh
+                                                </a>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
                     </div>
-                }
+                </div>
             </div>
         </div>
 
-        <!-- Validation Actions Card -->
-        <div class="card">
+        <div class="card mt-4">
             <div class="card-header">
                 <h5 class="mb-0"><i class="bi bi-check-square me-2"></i>Validation Decision</h5>
             </div>
@@ -191,58 +169,6 @@
                     </button>
                 </div>
 
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Submitter Info -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-person me-2"></i>Submitter Information</h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="avatar-placeholder me-3">
-                        <i class="bi bi-person-circle fs-2"></i>
-                    </div>
-                    <div>
-                        <h6 class="mb-0">@Model.SubmitterName</h6>
-                        <small class="text-muted">@Model.SubmitterId</small>
-                        @if (!string.IsNullOrEmpty(Model.SubmitterEmail))
-                        {
-                            <br><small class="text-muted">@Model.SubmitterEmail</small>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Validation Guidelines -->
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Validation Guidelines</h6>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-2">
-                        <i class="bi bi-check text-success me-2"></i>
-                        Evaluate feasibility and potential impact
-                    </li>
-                    <li class="mb-2">
-                        <i class="bi bi-check text-success me-2"></i>
-                        Consider implementation costs vs. benefits
-                    </li>
-                    <li class="mb-2">
-                        <i class="bi bi-check text-success me-2"></i>
-                        Check alignment with company objectives
-                    </li>
-                    <li class="mb-2">
-                        <i class="bi bi-check text-success me-2"></i>
-                        Provide constructive feedback
-                    </li>
-                </ul>
             </div>
         </div>
     </div>
