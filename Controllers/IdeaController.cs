@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Ideku.Services;
 using Ideku.Models.Entities;
 using Ideku.Models.ViewModels.Idea;
@@ -119,46 +120,135 @@ namespace Ideku.Controllers
             }
         }
 
-        // GET: /Idea/Index - Tampilkan daftar ideas user
-        public async Task<IActionResult> Index(bool success = false)
-        {
-            if (success)
+            // GET: /Idea/Index - Tampilkan daftar ideas user dengan filter dan pagination
+            public async Task<IActionResult> Index(
+                bool success = false,
+                string? searchString = null,
+                int? selectedCategory = null,
+                int? selectedEvent = null,
+                string? selectedStatus = null,
+                int page = 1,
+                int pageSize = 10)
             {
-                TempData["SuccessMessage"] = "Idea submitted successfully! Validation emails have been sent to reviewers.";
-            }
-
-            try
-            {
-                // 🔥 FIX: Menggunakan BadgeNumber dari user yang login untuk mencari ide
-                var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
-                if (string.IsNullOrEmpty(currentUserBadge))
+                if (success)
                 {
-                    // Handle jika user tidak memiliki badge number (misalnya, admin)
-                    TempData["ErrorMessage"] = "Could not determine your employee ID.";
-                    return View(new IdeaIndexViewModel());
+                    TempData["SuccessMessage"] = "Idea submitted successfully! Validation emails have been sent to reviewers.";
                 }
 
-                var ideas = await _ideaService.GetUserIdeasAsync(currentUserBadge);
-                var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUserBadge);
-
-                var viewModel = new IdeaIndexViewModel
+                try
                 {
-                    Ideas = ideas,
-                    CurrentUserName = User.Identity?.Name ?? "User",
-                    TotalIdeas = total,
-                    PendingIdeas = pending,
-                    ApprovedIdeas = approved
-                };
+                    // Get current user badge
+                    var currentUserBadge = await _authService.GetCurrentUserBadgeNumberAsync(User);
+                    if (string.IsNullOrEmpty(currentUserBadge))
+                    {
+                        TempData["ErrorMessage"] = "Could not determine your employee ID.";
+                        return View(new IdeaIndexViewModel());
+                    }
 
-                return View(viewModel);
+                    // Get all user ideas first
+                    var allIdeas = await _ideaService.GetUserIdeasAsync(currentUserBadge);
+
+                    // Apply filters
+                    var filteredIdeas = allIdeas.AsQueryable();
+
+                    if (!string.IsNullOrEmpty(searchString))
+                    {
+                        filteredIdeas = filteredIdeas.Where(i => 
+                            i.IdeaName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                            i.Id.ToString().Contains(searchString) ||
+                            i.IdeaCode.Contains(searchString, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (selectedCategory.HasValue)
+                    {
+                        filteredIdeas = filteredIdeas.Where(i => i.CategoryId == selectedCategory.Value);
+                    }
+
+                    if (selectedEvent.HasValue)
+                    {
+                        filteredIdeas = filteredIdeas.Where(i => i.EventId == selectedEvent.Value);
+                    }
+
+                    if (!string.IsNullOrEmpty(selectedStatus))
+                    {
+                        filteredIdeas = filteredIdeas.Where(i => i.Status == selectedStatus);
+                    }
+
+                    // Calculate pagination
+                    var totalItems = filteredIdeas.Count();
+                    var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+                    var paginatedIdeas = filteredIdeas
+                        .OrderByDescending(i => i.SubmittedDate)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToList();
+
+                    // Get statistics for all user ideas (not filtered)
+                    var (total, pending, approved) = await _ideaService.GetIdeaStatsAsync(currentUserBadge);
+
+                    // Populate dropdown data
+                    var categories = await _organizationService.GetAllCategoriesAsync();
+                    var events = await _organizationService.GetAllEventsAsync();
+
+                    var viewModel = new IdeaIndexViewModel
+                    {
+                        Ideas = paginatedIdeas,
+                        CurrentUserName = User.Identity?.Name ?? "User",
+                        TotalIdeas = total,
+                        PendingIdeas = pending,
+                        ApprovedIdeas = approved,
+                        
+                        // Filter data
+                        Categories = categories.Select(c => new SelectListItem 
+                        { 
+                            Value = c.Id.ToString(), 
+                            Text = c.NamaCategory,
+                            Selected = c.Id == selectedCategory
+                        }).ToList(),
+                        
+                        Events = events.Select(e => new SelectListItem 
+                        { 
+                            Value = e.Id.ToString(), 
+                            Text = e.NamaEvent,
+                            Selected = e.Id == selectedEvent
+                        }).ToList(),
+                        
+                        Statuses = new List<SelectListItem>
+                        {
+                            new() { Value = "Submitted", Text = "Submitted", Selected = selectedStatus == "Submitted" },
+                            new() { Value = "Under Review", Text = "Under Review", Selected = selectedStatus == "Under Review" },
+                            new() { Value = "Approved", Text = "Approved", Selected = selectedStatus == "Approved" },
+                            new() { Value = "Rejected", Text = "Rejected", Selected = selectedStatus == "Rejected" },
+                            new() { Value = "Completed", Text = "Completed", Selected = selectedStatus == "Completed" }
+                        },
+
+                        // Selected values
+                        SelectedCategory = selectedCategory,
+                        SelectedEvent = selectedEvent,
+                        SelectedStatus = selectedStatus,
+                        SearchString = searchString,
+
+                        // Pagination
+                        CurrentPage = page,
+                        TotalPages = totalPages,
+                        PageSize = pageSize
+                    };
+
+                    // Handle AJAX requests for filtering
+                    if (HttpContext.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return PartialView("_MyIdeasTablePartial", viewModel);
+                    }
+
+                    return View(viewModel);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error loading ideas for user: {Username}", User.Identity?.Name);
+                    TempData["ErrorMessage"] = "Unable to load your ideas.";
+                    return View(new IdeaIndexViewModel());
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading ideas for user: {Username}", User.Identity?.Name);
-                TempData["ErrorMessage"] = "Unable to load your ideas.";
-                return View(new IdeaIndexViewModel());
-            }
-        }
 
         // GET: /Idea/Create - Menampilkan form untuk membuat idea
         [HttpGet]
