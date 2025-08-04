@@ -1,0 +1,134 @@
+@model IdeaIndexViewModel
+
+<div class="table-responsive">
+    @if (Model.Ideas.Any())
+    {
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th style="min-width: 350px;">Title</th>
+                    <th>Category</th>
+                    <th>Event</th>
+                    <th>Saving Cost</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var idea in Model.Ideas)
+                {
+                    <tr>
+                        <td><span class="badge bg-light text-dark">#@idea.Id</span></td>
+                        <td>
+                            <div class="truncate-title" title="@idea.IdeaName">
+                                @idea.IdeaName
+                            </div>
+                            @if (!string.IsNullOrEmpty(idea.IdeaCode))
+                            {
+                                <small class="text-muted">Code: @idea.IdeaCode</small>
+                            }
+                        </td>
+                        <td>
+                            @if (idea.Category != null)
+                            {
+                                <span class="badge bg-info">@idea.Category.NamaCategory</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @if (idea.Event != null)
+                            {
+                                <span class="badge bg-secondary">@idea.Event.NamaEvent</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @if (idea.SavingCost > 0)
+                            {
+                                <span class="fw-bold text-success">@idea.SavingCost.ToString("N0")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @{
+                                var statusClass = idea.Status switch
+                                {
+                                    "Submitted" => "bg-primary",
+                                    "Under Review" => "bg-warning",
+                                    "Approved" => "bg-success",
+                                    "Rejected" => "bg-danger",
+                                    "Completed" => "bg-success",
+                                    _ => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @statusClass">@idea.Status</span>
+                        </td>
+                        <td>
+                            <div>@idea.SubmittedDate.ToString("MMM dd")</div>
+                            <small class="text-muted">@idea.SubmittedDate.ToString("HH:mm")</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@idea.Id" class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if (idea.Status == "Submitted")
+                                {
+                                    <a asp-action="Edit" asp-route-id="@idea.Id" class="btn btn-outline-secondary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" title="Delete" 
+                                            onclick="confirmDelete(@idea.Id, '@idea.IdeaName')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state text-center py-5">
+            <i class="bi bi-lightbulb display-1 text-muted"></i>
+            <h4 class="mt-3">No Ideas Found</h4>
+            <p class="text-muted">No ideas match your current filter criteria or you haven't submitted any ideas yet.</p>
+            <div class="mt-3">
+                <a asp-action="Create" class="btn btn-primary me-2">
+                    <i class="bi bi-plus-circle me-2"></i>Submit New Idea
+                </a>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Reset Filters
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Pagination Controls -->
+@if (Model.TotalPages > 1)
+{
+    <div class="card-footer d-flex justify-content-end">
+        @await Html.PartialAsync("_MyIdeasPaginationPartial", Model)
+    </div>
+}
+
+<div id="table-loading-spinner" class="text-center py-5" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading ideas...</p>
+</div>
