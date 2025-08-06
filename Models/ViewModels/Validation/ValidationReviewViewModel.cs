@@ -20,10 +20,13 @@ namespace Ideku.Models.ViewModels.Validation
         public string? Division { get; set; }
         public string? Department { get; set; }
 
-        [Display(Name = "Validation Comments")]
-        public string? ValidationComments { get; set; }
+        [Required(ErrorMessage = "Approval comments are required.")]
+        [Display(Name = "Approval Comments")]
+        public string ValidationComments { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Validated Saving Cost is required.")]
         [Display(Name = "Validated Saving Cost (USD)")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Validated Saving Cost must be greater than 0.")]
         public decimal? ValidatedSavingCost { get; set; }
 
         [Display(Name = "Rejection Reason")]
