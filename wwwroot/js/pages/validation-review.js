@@ -22,8 +22,24 @@ function showAlert(type, message, redirectUrl = null) {
 
 // Fungsi untuk menangani logika persetujuan (approve)
 function approveIdea(approveUrl, ideaId, token, listUrl) {
-    const comments = document.getElementById('approvalComments').value;
-    const validatedCost = document.getElementById('validatedSavingCost').value;
+    const comments = document.getElementById('approvalComments').value.trim();
+    const validatedCostInput = document.getElementById('validatedSavingCost');
+    const validatedCost = validatedCostInput.value;
+
+    if (!comments) {
+        showAlert('warning', 'Approval comments are required.');
+        return;
+    }
+
+    if (!validatedCost) {
+        showAlert('warning', 'Validated Saving Cost is required.');
+        return;
+    }
+
+    if (parseFloat(validatedCost) <= 0) {
+        showAlert('warning', 'Validated Saving Cost must be a positive number.');
+        return;
+    }
 
     Swal.fire({
         title: 'Are you sure?',
