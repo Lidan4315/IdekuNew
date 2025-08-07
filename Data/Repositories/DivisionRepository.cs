@@ -1,3 +1,4 @@
+// Data/Repositories/DivisionRepository.cs (No major changes)
 using Microsoft.EntityFrameworkCore;
 using Ideku.Data.Context;
 using Ideku.Models.Entities;
@@ -22,7 +23,9 @@ namespace Ideku.Data.Repositories
 
         public async Task<Divisi?> GetByIdAsync(string id)
         {
-            return await _context.Divisi.FindAsync(id);
+            return await _context.Divisi
+                .Include(d => d.Departements)
+                .FirstOrDefaultAsync(d => d.Id == id);
         }
     }
 }

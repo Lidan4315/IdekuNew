@@ -1,4 +1,4 @@
-// Models/Entities/User.cs (Updated with role relationship)
+// Models/Entities/User.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,7 +9,7 @@ namespace Ideku.Models.Entities
     {
         [Key]
         [Column("id")]
-        public int Id { get; set; }
+        public long Id { get; set; } // Changed to bigint
 
         [Required]
         [Column("employee_id", TypeName = "varchar(10)")]
@@ -47,5 +47,14 @@ namespace Ideku.Models.Entities
 
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
+
+        // Navigation Properties
+        public ICollection<Idea> InitiatedIdeas { get; set; } = new List<Idea>();
+        public ICollection<ApprovalHistory> ApprovalHistory { get; set; } = new List<ApprovalHistory>();
+        public ICollection<IdeaMilestone> CreatedMilestones { get; set; } = new List<IdeaMilestone>();
+        public ICollection<IdeaMilestone> AssignedMilestones { get; set; } = new List<IdeaMilestone>();
+        public ICollection<SavingMonitoring> ReportedMonitoring { get; set; } = new List<SavingMonitoring>();
+        public ICollection<SavingMonitoring> ReviewedMonitoring { get; set; } = new List<SavingMonitoring>();
+        public ICollection<SystemSetting> UpdatedSettings { get; set; } = new List<SystemSetting>();
     }
 }

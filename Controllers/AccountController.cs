@@ -1,3 +1,4 @@
+// Controllers/AccountController.cs (Minor updates for new schema)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
@@ -18,7 +19,6 @@ namespace Ideku.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            // Jika user sudah login, redirect ke Home
             if (User.Identity.IsAuthenticated)
             {
                 return RedirectToAction("Index", "Home");
@@ -38,37 +38,33 @@ namespace Ideku.Controllers
 
             try
             {
-                // Authenticate user melalui AuthService
                 var user = await _authService.AuthenticateAsync(model.Username);
 
-                if (user != null)
+                if (user?.Employee != null)
                 {
-                    // Create claims untuk user yang berhasil login
                     var claims = new List<Claim>
                     {
                         new Claim(ClaimTypes.Name, user.Username),
-                        new Claim("FullName", user.Name),
+                        new Claim("FullName", user.Employee.Name),
                         new Claim("EmployeeId", user.EmployeeId),
+                        new Claim("UserId", user.Id.ToString()),
                         new Claim(ClaimTypes.Role, user.Role.RoleName)
                     };
 
                     var claimsIdentity = new ClaimsIdentity(claims, "MyCookieAuth");
                     var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-                    // Sign in user dengan cookie
                     await HttpContext.SignInAsync("MyCookieAuth", claimsPrincipal);
 
-                    TempData["SuccessMessage"] = $"Welcome back, {user.Name}!";
+                    TempData["SuccessMessage"] = $"Welcome back, {user.Employee.Name}!";
                     return RedirectToAction("Index", "Home");
                 }
 
-                // Login gagal
                 ModelState.AddModelError("", "Invalid username. Please check and try again.");
                 return View(model);
             }
             catch (Exception ex)
             {
-                // Log error (dalam implementasi nyata)
                 ModelState.AddModelError("", "An error occurred during login. Please try again.");
                 return View(model);
             }
@@ -85,7 +81,6 @@ namespace Ideku.Controllers
             }
             catch (Exception ex)
             {
-                // Log error
                 TempData["ErrorMessage"] = "An error occurred during logout.";
             }
 

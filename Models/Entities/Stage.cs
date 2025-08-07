@@ -1,32 +1,34 @@
-// Models/Entities/Role.cs (Updated)
+// Models/Entities/Stage.cs (NEW)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Ideku.Models.Entities
 {
-    [Table("roles")]
-    public class Role
+    [Table("stages")]
+    public class Stage
     {
         [Key]
         [Column("id", TypeName = "varchar(10)")]
         public string Id { get; set; } = string.Empty;
 
         [Required]
-        [Column("role_name", TypeName = "varchar(50)")]
-        public string RoleName { get; set; } = string.Empty;
+        [Column("name", TypeName = "nvarchar(100)")]
+        public string Name { get; set; } = string.Empty;
 
-        [Column("description", TypeName = "varchar(100)")]
+        [Column("description", TypeName = "nvarchar(500)")]
         public string? Description { get; set; }
+
+        [Column("default_timeout_days")]
+        public int? DefaultTimeoutDays { get; set; }
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [Column("updated_at")]
-        public DateTime? UpdatedAt { get; set; }
-
         // Navigation Properties
-        public ICollection<User> Users { get; set; } = new List<User>();
-        public ICollection<RoleFeaturePermission> RoleFeaturePermissions { get; set; } = new List<RoleFeaturePermission>();
         public ICollection<StageApprover> StageApprovers { get; set; } = new List<StageApprover>();
+        public ICollection<WorkflowStage> WorkflowStages { get; set; } = new List<WorkflowStage>();
     }
 }

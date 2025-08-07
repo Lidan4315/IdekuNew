@@ -1,6 +1,7 @@
-// Services/WorkflowService.cs (Updated for new schema)
+// Services/WorkflowService.cs (Complete rewrite for new schema)
 using Microsoft.EntityFrameworkCore;
 using Ideku.Data.Context;
+using Ideku.Data.Repositories;
 using Ideku.Models.Entities;
 
 namespace Ideku.Services
@@ -8,62 +9,89 @@ namespace Ideku.Services
     public class WorkflowService
     {
         private readonly AppDbContext _context;
-        private readonly ApproverService _approverService;
+        private readonly WorkflowRepository _workflowRepository;
+        private readonly StageRepository _stageRepository;
+        private readonly ApprovalHistoryRepository _approvalHistoryRepository;
         private readonly NotificationService _notificationService;
         private readonly EmailService _emailService;
         private readonly ILogger<WorkflowService> _logger;
 
         public WorkflowService(
             AppDbContext context,
-            ApproverService approverService,
+            WorkflowRepository workflowRepository,
+            StageRepository stageRepository,
+            ApprovalHistoryRepository approvalHistoryRepository,
             NotificationService notificationService,
             EmailService emailService,
             ILogger<WorkflowService> logger)
         {
             _context = context;
-            _approverService = approverService;
+            _workflowRepository = workflowRepository;
+            _stageRepository = stageRepository;
+            _approvalHistoryRepository = approvalHistoryRepository;
             _notificationService = notificationService;
             _emailService = emailService;
             _logger = logger;
         }
 
-        public async Task<(string WorkflowType, int MaxStage)> DetermineWorkflowTypeAsync(decimal savingCost)
-        {
-            var threshold = await GetHighValueThresholdAsync();
-            
-            if (savingCost >= threshold)
-            {
-                return ("HIGH_VALUE", 6);
-            }
-            else
-            {
-                return ("STANDARD", 3);
-            }
-        }
-
         public async Task InitiateWorkflowAsync(Idea idea)
         {
-            // Stage 0 is submission, so we need to find the approver for Stage 1
-            var nextApprover = await _approverService.GetNextApproverAsync(idea.Id, 1);
-            if (nextApprover != null)
+            try
             {
-                await _notificationService.SendApprovalRequestAsync(idea.Id, nextApprover.Id, 1);
-                _logger.LogInformation("Workflow initiated for idea {IdeaId}. First approval request sent to {ApproverId}", idea.Id, nextApprover.Id);
+                if (idea.WorkflowDefinitionId == null)
+                {
+                    _logger.LogWarning("Idea {IdeaId} has no workflow definition assigned", idea.Id);
+                    return;
+                }
+
+                var workflowStages = await _workflowRepository.GetWorkflowStagesAsync(idea.WorkflowDefinitionId);
+                if (!workflowStages.Any())
+                {
+                    _logger.LogWarning("No workflow stages found for workflow {WorkflowId}", idea.WorkflowDefinitionId);
+                    return;
+                }
+
+                // Find first stage (sequence 1)
+                var firstStage = workflowStages.OrderBy(ws => ws.SequenceNumber).First();
+                var nextApprovers = await _stageRepository.GetApproversForStageAsync(
+                    firstStage.StageId, 
+                    idea.TargetDivisionId, 
+                    idea.TargetDepartmentId
+                );
+
+                if (nextApprovers.Any())
+                {
+                    foreach (var approver in nextApprovers)
+                    {
+                        await _notificationService.SendApprovalRequestAsync(idea.Id, approver.Id, 1);
+                    }
+                    
+                    _logger.LogInformation("Workflow initiated for idea {IdeaId}. Approval requests sent to {ApproverCount} approvers", 
+                        idea.Id, nextApprovers.Count);
+                }
+                else
+                {
+                    _logger.LogWarning("No approvers found for first stage of idea {IdeaId}", idea.Id);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogWarning("Workflow initiation failed for idea {IdeaId}: No approver found for stage 1.", idea.Id);
+                _logger.LogError(ex, "Error initiating workflow for idea {IdeaId}", idea.Id);
             }
         }
 
-        public async Task<bool> AdvanceStageAsync(string ideaId, string approverId, string comments = null, decimal? validatedSavingCost = null)
+        public async Task<bool> AdvanceStageAsync(long ideaId, long approverUserId, string comments = null, decimal? validatedSavingCost = null)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             
             try
             {
                 var idea = await _context.Ideas
+                    .Include(i => i.WorkflowDefinition)
+                        .ThenInclude(wd => wd.WorkflowStages)
+                            .ThenInclude(ws => ws.Stage)
                     .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
                     .FirstOrDefaultAsync(i => i.Id == ideaId);
                     
                 if (idea == null)
@@ -72,13 +100,14 @@ namespace Ideku.Services
                     return false;
                 }
 
-                var approver = await _context.Users
+                var approverUser = await _context.Users
+                    .Include(u => u.Employee)
                     .Include(u => u.Role)
-                    .FirstOrDefaultAsync(u => u.EmployeeId == approverId);
+                    .FirstOrDefaultAsync(u => u.Id == approverUserId);
                     
-                if (approver == null)
+                if (approverUser == null)
                 {
-                    _logger.LogWarning("Approver {ApproverId} not found", approverId);
+                    _logger.LogWarning("Approver {ApproverId} not found", approverUserId);
                     return false;
                 }
 
@@ -91,14 +120,13 @@ namespace Ideku.Services
                     IdeaId = ideaId,
                     Stage = currentStage,
                     Action = "APPROVE",
-                    ApproverId = approverId,
-                    ApproverRoleId = approver.RoleId,
+                    ApproverUserId = approverUserId,
                     Comments = comments,
                     ValidatedSavingCost = validatedSavingCost,
                     ActionDate = DateTime.UtcNow
                 };
 
-                _context.ApprovalHistory.Add(approvalHistory);
+                await _approvalHistoryRepository.CreateAsync(approvalHistory);
 
                 // 2. Update validated saving cost if provided
                 if (validatedSavingCost.HasValue)
@@ -106,31 +134,45 @@ namespace Ideku.Services
                     idea.ValidatedSavingCost = validatedSavingCost.Value;
                 }
 
-                // 3. Update idea status
-                idea.CurrentStage = nextStage;
-                idea.UpdatedDate = DateTime.UtcNow;
+                // 3. Check if this is the final stage
+                var workflowStages = idea.WorkflowDefinition?.WorkflowStages?.OrderBy(ws => ws.SequenceNumber).ToList();
+                var maxStage = workflowStages?.Count ?? 0;
 
-                if (nextStage >= idea.MaxStage)
+                if (nextStage > maxStage)
                 {
+                    // Final approval - mark as completed
                     idea.Status = "Completed";
                     idea.CompletedDate = DateTime.UtcNow;
+                    await _notificationService.SendCompletionNotificationAsync(ideaId);
                 }
                 else
                 {
+                    // Move to next stage
+                    idea.CurrentStage = nextStage;
                     idea.Status = "Under Review";
+                    
+                    // Find next stage approvers
+                    var nextStageWorkflow = workflowStages?.FirstOrDefault(ws => ws.SequenceNumber == nextStage);
+                    if (nextStageWorkflow != null)
+                    {
+                        var nextApprovers = await _stageRepository.GetApproversForStageAsync(
+                            nextStageWorkflow.StageId,
+                            idea.TargetDivisionId,
+                            idea.TargetDepartmentId
+                        );
+
+                        foreach (var nextApprover in nextApprovers)
+                        {
+                            await _notificationService.SendApprovalRequestAsync(ideaId, nextApprover.Id, nextStage);
+                        }
+                    }
                 }
 
                 await _context.SaveChangesAsync();
-
-                // 4. Handle next stage or completion
-                await HandleStageTransitionAsync(idea, currentStage, nextStage);
-
-                // 5. Notify stakeholders about progress (handled within HandleStageTransitionAsync)
-
                 await transaction.CommitAsync();
                 
-                _logger.LogInformation("Idea {IdeaId} advanced from stage {CurrentStage} to {NextStage} by {ApproverId}", 
-                    ideaId, currentStage, nextStage, approverId);
+                _logger.LogInformation("Idea {IdeaId} advanced from stage {CurrentStage} to {NextStage} by user {ApproverId}", 
+                    ideaId, currentStage, nextStage, approverUserId);
                 
                 return true;
             }
@@ -142,7 +184,7 @@ namespace Ideku.Services
             }
         }
 
-        public async Task<bool> RejectIdeaAsync(string ideaId, string approverId, string rejectReason)
+        public async Task<bool> RejectIdeaAsync(long ideaId, long approverUserId, string rejectReason)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             
@@ -150,15 +192,17 @@ namespace Ideku.Services
             {
                 var idea = await _context.Ideas
                     .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
                     .FirstOrDefaultAsync(i => i.Id == ideaId);
                     
                 if (idea == null) return false;
 
-                var approver = await _context.Users
+                var approverUser = await _context.Users
+                    .Include(u => u.Employee)
                     .Include(u => u.Role)
-                    .FirstOrDefaultAsync(u => u.EmployeeId == approverId);
+                    .FirstOrDefaultAsync(u => u.Id == approverUserId);
                     
-                if (approver == null) return false;
+                if (approverUser == null) return false;
 
                 // 1. Log rejection history
                 var approvalHistory = new ApprovalHistory
@@ -166,18 +210,16 @@ namespace Ideku.Services
                     IdeaId = ideaId,
                     Stage = idea.CurrentStage,
                     Action = "REJECT",
-                    ApproverId = approverId,
-                    ApproverRoleId = approver.RoleId,
+                    ApproverUserId = approverUserId,
                     Comments = rejectReason,
                     ActionDate = DateTime.UtcNow
                 };
 
-                _context.ApprovalHistory.Add(approvalHistory);
+                await _approvalHistoryRepository.CreateAsync(approvalHistory);
 
                 // 2. Update idea status
                 idea.Status = "Rejected";
                 idea.RejectReason = rejectReason;
-                idea.UpdatedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
@@ -186,8 +228,8 @@ namespace Ideku.Services
 
                 await transaction.CommitAsync();
                 
-                _logger.LogInformation("Idea {IdeaId} rejected at stage {Stage} by {ApproverId}", 
-                    ideaId, idea.CurrentStage, approverId);
+                _logger.LogInformation("Idea {IdeaId} rejected at stage {Stage} by user {ApproverId}", 
+                    ideaId, idea.CurrentStage, approverUserId);
                 
                 return true;
             }
@@ -199,20 +241,24 @@ namespace Ideku.Services
             }
         }
 
-        public async Task<bool> RequestMoreInfoAsync(string ideaId, string approverId, string infoRequest)
+        public async Task<bool> RequestMoreInfoAsync(long ideaId, long approverUserId, string infoRequest)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             
             try
             {
-                var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+                var idea = await _context.Ideas
+                    .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
+                    .FirstOrDefaultAsync(i => i.Id == ideaId);
                 if (idea == null) return false;
 
-                var approver = await _context.Users
+                var approverUser = await _context.Users
+                    .Include(u => u.Employee)
                     .Include(u => u.Role)
-                    .FirstOrDefaultAsync(u => u.EmployeeId == approverId);
+                    .FirstOrDefaultAsync(u => u.Id == approverUserId);
                     
-                if (approver == null) return false;
+                if (approverUser == null) return false;
 
                 // 1. Log info request
                 var approvalHistory = new ApprovalHistory
@@ -220,17 +266,15 @@ namespace Ideku.Services
                     IdeaId = ideaId,
                     Stage = idea.CurrentStage,
                     Action = "REQUEST_INFO",
-                    ApproverId = approverId,
-                    ApproverRoleId = approver.RoleId,
+                    ApproverUserId = approverUserId,
                     Comments = infoRequest,
                     ActionDate = DateTime.UtcNow
                 };
 
-                _context.ApprovalHistory.Add(approvalHistory);
+                await _approvalHistoryRepository.CreateAsync(approvalHistory);
 
                 // 2. Update idea status (keep same stage, change status)
                 idea.Status = "More Info Required";
-                idea.UpdatedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
@@ -239,8 +283,8 @@ namespace Ideku.Services
 
                 await transaction.CommitAsync();
                 
-                _logger.LogInformation("More info requested for idea {IdeaId} at stage {Stage} by {ApproverId}", 
-                    ideaId, idea.CurrentStage, approverId);
+                _logger.LogInformation("More info requested for idea {IdeaId} at stage {Stage} by user {ApproverId}", 
+                    ideaId, idea.CurrentStage, approverUserId);
                 
                 return true;
             }
@@ -252,156 +296,91 @@ namespace Ideku.Services
             }
         }
 
-
-        public async Task<List<Idea>> GetPendingApprovalsForUserAsync(string employeeId)
+        public async Task<List<Idea>> GetPendingApprovalsForUserAsync(long userId)
         {
             var user = await _context.Users
+                .Include(u => u.Employee)
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.EmployeeId == employeeId);
+                .FirstOrDefaultAsync(u => u.Id == userId);
                 
             if (user == null) return new List<Idea>();
 
-            var employee = await _context.Employees
-                .FirstOrDefaultAsync(e => e.Id == employeeId);
-                
-            if (employee == null) return new List<Idea>();
-
+            // Get all ideas that are under review
             var query = _context.Ideas
                 .Include(i => i.Initiator)
+                    .ThenInclude(u => u.Employee)
                 .Include(i => i.Category)
                 .Include(i => i.TargetDivision)
                 .Include(i => i.TargetDepartment)
+                .Include(i => i.WorkflowDefinition)
+                    .ThenInclude(wd => wd.WorkflowStages)
+                        .ThenInclude(ws => ws.Stage)
+                            .ThenInclude(s => s.StageApprovers)
                 .Where(i => i.Status == "Under Review");
 
-            // Filter based on user's role and current stage
-            var userDivision = employee.DivisiId;
-            var userDepartment = employee.DepartementId;
+            var ideas = await query.ToListAsync();
+            var pendingIdeas = new List<Idea>();
 
-            // Filter based on user's role and the stage they are allowed to approve
-            if (user.Role.RoleName == "Superuser")
+            foreach (var idea in ideas)
             {
-                // Superuser sees everything, no extra filters needed.
+                if (await CanUserApproveIdeaAsync(user, idea))
+                {
+                    pendingIdeas.Add(idea);
+                }
             }
+
+            return pendingIdeas.OrderBy(i => i.SubmittedDate).ToList();
+        }
+
+        private async Task<bool> CanUserApproveIdeaAsync(User user, Idea idea)
+        {
+            if (user.Role.RoleName == "Superuser") return true;
+
+            // Get current stage workflow
+            var currentStageSequence = idea.CurrentStage + 1; // Next stage to approve
+            var workflowStage = idea.WorkflowDefinition?.WorkflowStages?
+                .FirstOrDefault(ws => ws.SequenceNumber == currentStageSequence);
+
+            if (workflowStage == null) return false;
+
+            // Check if user's role can approve this stage
+            var stageApprovers = await _stageRepository.GetStageApproversAsync(workflowStage.StageId);
+            var canApprove = stageApprovers.Any(sa => sa.RoleId == user.RoleId);
+
+            if (!canApprove) return false;
+
+            // Check division/department constraints
+            var userEmployee = user.Employee;
+            if (userEmployee == null) return false;
+
+            // Department-specific roles
+            if (IsDepartmentSpecificRole(user.RoleId))
+            {
+                return userEmployee.DepartementId == idea.TargetDepartmentId &&
+                       userEmployee.DivisiId == idea.TargetDivisionId;
+            }
+            // Division-specific roles
+            else if (IsDivisionSpecificRole(user.RoleId))
+            {
+                return userEmployee.DivisiId == idea.TargetDivisionId;
+            }
+            // Company-wide roles
             else
             {
-                // FIX: An approver acts on the current stage to move it to the next.
-                // So, an approver with ApprovalLevel 'L' should see ideas at CurrentStage 'L-1'.
-                query = query.Where(i => (i.CurrentStage + 1) == user.Role.ApprovalLevel &&
-                                   (i.WorkflowType == "STANDARD" ? user.Role.CanApproveStandard : user.Role.CanApproveHighValue));
-
-                // Add division/department filters for specific roles
-                if (new[] { "R04", "R06" }.Contains(user.Role.Id)) // Department/Workstream specific roles
-                {
-                    query = query.Where(e => e.TargetDepartmentId == userDepartment && e.TargetDivisionId == userDivision);
-                }
-                else if (user.Role.Id == "R07") // Division specific role
-                {
-                    query = query.Where(e => e.TargetDivisionId == userDivision);
-                }
-                // Company-wide roles (R08, R09, R10, R11) don't need division/department filter
+                return true;
             }
-
-            return await query
-                .OrderBy(i => i.SubmittedDate)
-                .ToListAsync();
         }
 
-        private async Task<decimal> GetHighValueThresholdAsync()
+        private bool IsDepartmentSpecificRole(string roleId)
         {
-            var setting = await _context.SystemSettings
-                .Where(s => s.SettingKey == "HIGH_VALUE_THRESHOLD")
-                .FirstOrDefaultAsync();
-
-            if (setting != null && decimal.TryParse(setting.SettingValue, out decimal threshold))
-            {
-                return threshold;
-            }
-
-            return 20000; // Default threshold
+            var departmentRoles = new[] { "R04", "R06", "R16" }; // Workstream Leader, Manager, Manager Acting
+            return departmentRoles.Contains(roleId);
         }
 
-        private async Task HandleStageTransitionAsync(Idea idea, int currentStage, int nextStage)
+        private bool IsDivisionSpecificRole(string roleId)
         {
-            // After moving to nextStage, we need to find the approver for the stage *after* that.
-            var approverForNextAction = await _approverService.GetNextApproverAsync(idea.Id, nextStage + 1);
-            var initiator = await _context.Employees.FindAsync(idea.InitiatorId);
-            var workstreamLeader = await _approverService.GetWorkstreamLeaderAsync(idea.TargetDivisionId, idea.TargetDepartmentId);
-
-            // Standard Workflow Notifications
-            if (idea.WorkflowType == "STANDARD")
-            {
-                if (nextStage == 1) // Just finished stage 0, now at stage 1. Notify approver for stage 2.
-                {
-                    // Email to Manager (approver for stage 2) & Initiator
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                }
-                else if (nextStage == 2) // Just finished stage 1, now at stage 2. Notify approver for stage 3.
-                {
-                    // Email to Initiator & Workstream Leader & send request to next approver
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendProgressUpdateAsync(idea.Id, workstreamLeader.Id, currentStage, "APPROVED");
-                    // Prompt Workstream Leader to create milestone
-                    if (workstreamLeader != null) await _notificationService.SendMilestoneCreationRequestAsync(idea.Id, workstreamLeader.Id);
-                }
-                else if (nextStage == 3) // Approved by GM Divisi
-                {
-                     // Prompt Workstream Leader to create milestone and input saving monitoring
-                    if (workstreamLeader != null) await _notificationService.SendMilestoneAndSavingRequestAsync(idea.Id, workstreamLeader.Id);
-                }
-            }
-            // High Value Workflow Notifications
-            else if (idea.WorkflowType == "HIGH_VALUE")
-            {
-                if (nextStage == 1) // Just finished stage 0, now at stage 1. Notify approver for stage 2.
-                {
-                    // Email to Initiator & GM Divisi (approver for stage 2)
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                }
-                else if (nextStage == 2) // Just finished stage 1, now at stage 2. Notify approver for stage 3.
-                {
-                    // Email to Initiator, Workstream Leader & send request to next approver
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendProgressUpdateAsync(idea.Id, workstreamLeader.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendMilestoneCreationRequestAsync(idea.Id, workstreamLeader.Id);
-                }
-                else if (nextStage == 3) // Just finished stage 2, now at stage 3. Notify approver for stage 4.
-                {
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendProgressUpdateAsync(idea.Id, workstreamLeader.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendMilestoneAndSavingRequestAsync(idea.Id, workstreamLeader.Id);
-                }
-                else if (nextStage == 4) // Just finished stage 3, now at stage 4. Notify approver for stage 5.
-                {
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendProgressUpdateAsync(idea.Id, workstreamLeader.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendMilestoneCreationRequestAsync(idea.Id, workstreamLeader.Id);
-                }
-                 else if (nextStage == 5) // Just finished stage 4, now at stage 5. Notify approver for stage 6.
-                {
-                    if (approverForNextAction != null) await _notificationService.SendApprovalRequestAsync(idea.Id, approverForNextAction.Id, nextStage + 1);
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendProgressUpdateAsync(idea.Id, workstreamLeader.Id, currentStage, "APPROVED");
-                    if (workstreamLeader != null) await _notificationService.SendCompletionRequestAsync(idea.Id, workstreamLeader.Id);
-                }
-                else if (nextStage == 6) // Approved by CFO
-                {
-                    // Final approval, notify Initiator and Workstream Leader
-                    if (initiator != null) await _notificationService.SendProgressUpdateAsync(idea.Id, initiator.Id, currentStage, "COMPLETED");
-                    if (workstreamLeader != null) await _notificationService.SendProgressUpdateAsync(idea.Id, workstreamLeader.Id, currentStage, "COMPLETED");
-                }
-            }
-
-            // Handle final completion
-            if (nextStage >= idea.MaxStage)
-            {
-                await _notificationService.SendCompletionNotificationAsync(idea.Id);
-            }
+            var divisionRoles = new[] { "R07", "R13" }; // GM Division, GM Division Acting
+            return divisionRoles.Contains(roleId);
         }
     }
 }

@@ -1,3 +1,4 @@
+// Services/FileService.cs (Updated for new ID format)
 namespace Ideku.Services
 {
     public class FileService
@@ -20,9 +21,7 @@ namespace Ideku.Services
                 Directory.CreateDirectory(uploadPath);
             }
 
-            // Format the stage integer into the desired string format "S<number>"
             var stageString = $"S{currentStage}";
-
             var fileExtension = Path.GetExtension(file.FileName);
             var tempFileIndex = fileIndex;
             var fileName = $"{ideaId}_{stageString}_{tempFileIndex:D3}{fileExtension}";

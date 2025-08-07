@@ -1,3 +1,4 @@
+// Services/OrganizationService.cs (Minor updates)
 using Ideku.Data.Repositories;
 using Ideku.Models.Entities;
 
@@ -50,6 +51,21 @@ namespace Ideku.Services
         public async Task<Departement?> GetDepartmentByIdAsync(string id)
         {
             return await _departmentRepository.GetByIdAsync(id);
+        }
+
+        public async Task<Category?> GetCategoryByIdAsync(int id)
+        {
+            return await _categoryRepository.GetByIdAsync(id);
+        }
+
+        public async Task<Event?> GetEventByIdAsync(int id)
+        {
+            return await _eventRepository.GetByIdAsync(id);
+        }
+
+        public async Task<List<Departement>> GetAllDepartmentsAsync()
+        {
+            return await _departmentRepository.GetAllAsync();
         }
     }
 }

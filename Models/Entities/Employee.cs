@@ -1,4 +1,4 @@
-// Models/Entities/Employee.cs (Updated - removed is_active, added employment_status)
+// Models/Entities/Employee.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -42,13 +42,11 @@ namespace Ideku.Models.Entities
 
         // Navigation Properties
         public User? User { get; set; }
-        public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
         public ICollection<ApprovalHistory> ApprovalHistory { get; set; } = new List<ApprovalHistory>();
         public ICollection<IdeaMilestone> CreatedMilestones { get; set; } = new List<IdeaMilestone>();
         public ICollection<IdeaMilestone> AssignedMilestones { get; set; } = new List<IdeaMilestone>();
         public ICollection<SavingMonitoring> ReportedMonitoring { get; set; } = new List<SavingMonitoring>();
         public ICollection<SavingMonitoring> ReviewedMonitoring { get; set; } = new List<SavingMonitoring>();
-        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<SystemSetting> UpdatedSettings { get; set; } = new List<SystemSetting>();
 
         // Computed Properties
