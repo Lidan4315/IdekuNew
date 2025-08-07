@@ -1,3 +1,4 @@
+// Data/Repositories/DepartmentRepository.cs (No major changes)
 using Microsoft.EntityFrameworkCore;
 using Ideku.Data.Context;
 using Ideku.Models.Entities;
@@ -29,7 +30,18 @@ namespace Ideku.Data.Repositories
 
         public async Task<Departement?> GetByIdAsync(string id)
         {
-            return await _context.Departement.FindAsync(id);
+            return await _context.Departement
+                .Include(d => d.Divisi)
+                .FirstOrDefaultAsync(d => d.Id == id);
+        }
+
+        public async Task<List<Departement>> GetAllAsync()
+        {
+            return await _context.Departement
+                .Include(d => d.Divisi)
+                .OrderBy(d => d.Divisi.NamaDivisi)
+                .ThenBy(d => d.NamaDepartement)
+                .ToListAsync();
         }
     }
 }

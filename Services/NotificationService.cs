@@ -1,4 +1,4 @@
-// Services/NotificationService.cs (Basic implementation)
+// Services/NotificationService.cs (Updated for new schema)
 using Microsoft.EntityFrameworkCore;
 using Ideku.Data.Context;
 using Ideku.Models.Entities;
@@ -18,6 +18,190 @@ namespace Ideku.Services
             _emailService = emailService;
         }
 
+        public async Task SendApprovalRequestAsync(long ideaId, long recipientUserId, int stage)
+        {
+            try
+            {
+                var idea = await _context.Ideas
+                    .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
+                    .FirstOrDefaultAsync(i => i.Id == ideaId);
+                    
+                if (idea == null) return;
+
+                var recipient = await _context.Users
+                    .Include(u => u.Employee)
+                    .FirstOrDefaultAsync(u => u.Id == recipientUserId);
+                    
+                if (recipient?.Employee == null) return;
+
+                var notification = new Notification
+                {
+                    IdeaId = ideaId,
+                    NotificationType = "APPROVAL_REQUEST",
+                    Title = "New Idea Requires Your Approval",
+                    Message = $"Idea '{idea.IdeaName}' (ID: {idea.Id}) is waiting for your review at Stage {stage}",
+                    Priority = "High",
+                    ActionUrl = $"/validation/review/{ideaId}"
+                };
+
+                await SendNotificationAndEmailAsync(notification, recipient.Employee.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending approval request for idea {IdeaId} to user {UserId}", ideaId, recipientUserId);
+            }
+        }
+
+        public async Task SendCompletionNotificationAsync(long ideaId)
+        {
+            try
+            {
+                var idea = await _context.Ideas
+                    .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
+                    .FirstOrDefaultAsync(i => i.Id == ideaId);
+                    
+                if (idea?.Initiator?.Employee == null) return;
+
+                var notification = new Notification
+                {
+                    IdeaId = ideaId,
+                    NotificationType = "IDEA_APPROVED",
+                    Title = "Your Idea Has Been Approved!",
+                    Message = $"Congratulations! Your idea '{idea.IdeaName}' (ID: {idea.Id}) has been fully approved and is ready for implementation.",
+                    Priority = "High",
+                    ActionUrl = $"/idea/details/{ideaId}"
+                };
+
+                await SendNotificationAndEmailAsync(notification, idea.Initiator.Employee.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending completion notification for idea {IdeaId}", ideaId);
+            }
+        }
+
+        public async Task SendRejectionNotificationAsync(long ideaId, string rejectReason)
+        {
+            try
+            {
+                var idea = await _context.Ideas
+                    .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
+                    .FirstOrDefaultAsync(i => i.Id == ideaId);
+                    
+                if (idea?.Initiator?.Employee == null) return;
+
+                var notification = new Notification
+                {
+                    IdeaId = ideaId,
+                    NotificationType = "IDEA_REJECTED",
+                    Title = "Your Idea Requires Revision",
+                    Message = $"Your idea '{idea.IdeaName}' (ID: {idea.Id}) needs revision. Reason: {rejectReason}",
+                    Priority = "High",
+                    ActionUrl = $"/idea/details/{ideaId}"
+                };
+
+                await SendNotificationAndEmailAsync(notification, idea.Initiator.Employee.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending rejection notification for idea {IdeaId}", ideaId);
+            }
+        }
+
+        public async Task SendInfoRequestNotificationAsync(long ideaId, string infoRequest)
+        {
+            try
+            {
+                var idea = await _context.Ideas
+                    .Include(i => i.Initiator)
+                        .ThenInclude(u => u.Employee)
+                    .FirstOrDefaultAsync(i => i.Id == ideaId);
+                    
+                if (idea?.Initiator?.Employee == null) return;
+
+                var notification = new Notification
+                {
+                    IdeaId = ideaId,
+                    NotificationType = "MORE_INFO_REQUIRED",
+                    Title = "Additional Information Required",
+                    Message = $"More information is needed for your idea '{idea.IdeaName}' (ID: {idea.Id}): {infoRequest}",
+                    Priority = "Normal",
+                    ActionUrl = $"/idea/edit/{ideaId}"
+                };
+
+                await SendNotificationAndEmailAsync(notification, idea.Initiator.Employee.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending info request notification for idea {IdeaId}", ideaId);
+            }
+        }
+
+        public async Task SendProgressUpdateAsync(long ideaId, long recipientUserId, int stage, string action)
+        {
+            try
+            {
+                var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+                if (idea == null) return;
+
+                var recipient = await _context.Users
+                    .Include(u => u.Employee)
+                    .FirstOrDefaultAsync(u => u.Id == recipientUserId);
+                    
+                if (recipient?.Employee == null) return;
+
+                var notification = new Notification
+                {
+                    IdeaId = ideaId,
+                    NotificationType = "PROGRESS_UPDATE",
+                    Title = "Idea Progress Update",
+                    Message = $"Idea '{idea.IdeaName}' (ID: {idea.Id}) has been {action.ToLower()} at Stage {stage}",
+                    Priority = "Normal",
+                    ActionUrl = $"/idea/details/{ideaId}"
+                };
+
+                await SendNotificationAndEmailAsync(notification, recipient.Employee.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending progress update for idea {IdeaId} to user {UserId}", ideaId, recipientUserId);
+            }
+        }
+
+        public async Task SendMilestoneCreationRequestAsync(long ideaId, long recipientUserId)
+        {
+            try
+            {
+                var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+                if (idea == null) return;
+
+                var recipient = await _context.Users
+                    .Include(u => u.Employee)
+                    .FirstOrDefaultAsync(u => u.Id == recipientUserId);
+                    
+                if (recipient?.Employee == null) return;
+
+                var notification = new Notification
+                {
+                    IdeaId = ideaId,
+                    NotificationType = "MILESTONE_REQUEST",
+                    Title = "Action Required: Create Milestone",
+                    Message = $"Please create a milestone for the idea '{idea.IdeaName}' (ID: {idea.Id}).",
+                    Priority = "High",
+                    ActionUrl = $"/idea/details/{ideaId}#milestones"
+                };
+                
+                await SendNotificationAndEmailAsync(notification, recipient.Employee.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending milestone creation request for idea {IdeaId} to user {UserId}", ideaId, recipientUserId);
+            }
+        }
+
         private async Task SendNotificationAndEmailAsync(Notification notification, string recipientEmail)
         {
             try
@@ -26,7 +210,8 @@ namespace Ideku.Services
                     recipientEmail,
                     notification.Title,
                     notification.Message,
-                    notification.ActionUrl);
+                    notification.ActionUrl ?? ""
+                );
 
                 notification.IsEmailSent = emailSent;
                 if (emailSent)
@@ -37,8 +222,8 @@ namespace Ideku.Services
                 _context.Notifications.Add(notification);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Notification '{NotificationType}' for idea {IdeaId} to {RecipientId}. Email sent: {EmailSent}",
-                    notification.NotificationType, notification.IdeaId, notification.RecipientId, emailSent);
+                _logger.LogInformation("Notification '{NotificationType}' for idea {IdeaId} sent. Email sent: {EmailSent}",
+                    notification.NotificationType, notification.IdeaId, emailSent);
             }
             catch (Exception ex)
             {
@@ -47,127 +232,17 @@ namespace Ideku.Services
             }
         }
 
-        public async Task SendApprovalRequestAsync(string ideaId, string recipientId, int stage)
+        public async Task<List<Notification>> GetUserNotificationsAsync(long userId, bool unreadOnly = false)
         {
-            var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
-            if (idea == null) return;
+            // Since we removed recipient_id, we'll need to get notifications based on user's ideas
+            var userIdeas = await _context.Ideas
+                .Where(i => i.InitiatorUserId == userId)
+                .Select(i => i.Id)
+                .ToListAsync();
 
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == recipientId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = recipientId,
-                IdeaId = ideaId,
-                NotificationType = "APPROVAL_REQUEST",
-                Title = "New Idea Requires Your Approval",
-                Message = $"Idea '{idea.IdeaName}' (Code: {idea.Id}) is waiting for your review at Stage {stage}",
-                Priority = "High",
-                ActionUrl = $"/approval/review/{ideaId}"
-            };
-
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task SendCompletionNotificationAsync(string ideaId)
-        {
-            var idea = await _context.Ideas
-                .Include(i => i.Initiator)
-                .FirstOrDefaultAsync(i => i.Id == ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == idea.InitiatorId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = idea.InitiatorId,
-                IdeaId = ideaId,
-                NotificationType = "IDEA_APPROVED",
-                Title = "Your Idea Has Been Approved!",
-                Message = $"Congratulations! Your idea '{idea.IdeaName}' (Code: {idea.Id}) has been fully approved and is ready for implementation.",
-                Priority = "High",
-                ActionUrl = $"/idea/details/{ideaId}"
-            };
-
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task SendRejectionNotificationAsync(string ideaId, string rejectReason)
-        {
-            var idea = await _context.Ideas
-                .Include(i => i.Initiator)
-                .FirstOrDefaultAsync(i => i.Id == ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == idea.InitiatorId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = idea.InitiatorId,
-                IdeaId = ideaId,
-                NotificationType = "IDEA_REJECTED",
-                Title = "Your Idea Requires Revision",
-                Message = $"Your idea '{idea.IdeaName}' (Code: {idea.Id}) needs revision. Reason: {rejectReason}",
-                Priority = "High",
-                ActionUrl = $"/idea/details/{ideaId}"
-            };
-
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task SendInfoRequestNotificationAsync(string ideaId, string infoRequest)
-        {
-            var idea = await _context.Ideas
-                .Include(i => i.Initiator)
-                .FirstOrDefaultAsync(i => i.Id == ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == idea.InitiatorId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = idea.InitiatorId,
-                IdeaId = ideaId,
-                NotificationType = "MORE_INFO_REQUIRED",
-                Title = "Additional Information Required",
-                Message = $"More information is needed for your idea '{idea.IdeaName}' (Code: {idea.Id}): {infoRequest}",
-                Priority = "Normal",
-                ActionUrl = $"/idea/edit/{ideaId}"
-            };
-
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task SendProgressUpdateAsync(string ideaId, string recipientId, int stage, string action)
-        {
-            var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == recipientId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = recipientId,
-                IdeaId = ideaId,
-                NotificationType = "PROGRESS_UPDATE",
-                Title = "Idea Progress Update",
-                Message = $"Idea '{idea.IdeaName}' (Code: {idea.Id}) has been {action.ToLower()} at Stage {stage}",
-                Priority = "Normal",
-                ActionUrl = $"/idea/details/{ideaId}"
-            };
-
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task<List<Notification>> GetUserNotificationsAsync(string employeeId, bool unreadOnly = false)
-        {
             var query = _context.Notifications
                 .Include(n => n.Idea)
-                .Where(n => n.RecipientId == employeeId);
+                .Where(n => n.IdeaId.HasValue && userIdeas.Contains(n.IdeaId.Value));
 
             if (unreadOnly)
             {
@@ -176,7 +251,7 @@ namespace Ideku.Services
 
             return await query
                 .OrderByDescending(n => n.CreatedDate)
-                .Take(50) // Limit to latest 50 notifications
+                .Take(50)
                 .ToListAsync();
         }
 
@@ -189,72 +264,6 @@ namespace Ideku.Services
                 notification.ReadDate = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
-        }
-
-        public async Task SendMilestoneCreationRequestAsync(string ideaId, string recipientId)
-        {
-            var idea = await _context.Ideas.FindAsync(ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == recipientId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = recipientId,
-                IdeaId = ideaId,
-                NotificationType = "MILESTONE_REQUEST",
-                Title = "Action Required: Create Milestone",
-                Message = $"Please create a milestone for the idea '{idea.IdeaName}' (Code: {idea.Id}).",
-                Priority = "High",
-                ActionUrl = $"/idea/details/{ideaId}#milestones"
-            };
-            
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task SendMilestoneAndSavingRequestAsync(string ideaId, string recipientId)
-        {
-            var idea = await _context.Ideas.FindAsync(ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == recipientId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = recipientId,
-                IdeaId = ideaId,
-                NotificationType = "MILESTONE_SAVING_REQUEST",
-                Title = "Action Required: Milestone & Saving Plan",
-                Message = $"Please create a milestone and input the saving plan for the idea '{idea.IdeaName}' (Code: {idea.Id}).",
-                Priority = "High",
-                ActionUrl = $"/idea/details/{ideaId}#monitoring"
-            };
-
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
-        }
-
-        public async Task SendCompletionRequestAsync(string ideaId, string recipientId)
-        {
-            var idea = await _context.Ideas.FindAsync(ideaId);
-            if (idea == null) return;
-
-            var recipient = await _context.Employees.FirstOrDefaultAsync(e => e.Id == recipientId);
-            if (recipient == null) return;
-
-            var notification = new Notification
-            {
-                RecipientId = recipientId,
-                IdeaId = ideaId,
-                NotificationType = "COMPLETION_REQUEST",
-                Title = "Action Required: Complete Idea",
-                Message = $"Please mark the idea '{idea.IdeaName}' (Code: {idea.Id}) as complete.",
-                Priority = "High",
-                ActionUrl = $"/idea/details/{ideaId}#complete"
-            };
-            
-            await SendNotificationAndEmailAsync(notification, recipient.Email);
         }
     }
 }

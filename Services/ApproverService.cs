@@ -1,6 +1,7 @@
 // Services/ApproverService.cs (Updated for new schema)
 using Microsoft.EntityFrameworkCore;
 using Ideku.Data.Context;
+using Ideku.Data.Repositories;
 using Ideku.Models.Entities;
 
 namespace Ideku.Services
@@ -8,126 +9,134 @@ namespace Ideku.Services
     public class ApproverService
     {
         private readonly AppDbContext _context;
+        private readonly StageRepository _stageRepository;
+        private readonly UserRepository _userRepository;
         private readonly ILogger<ApproverService> _logger;
 
-        public ApproverService(AppDbContext context, ILogger<ApproverService> logger)
+        public ApproverService(
+            AppDbContext context, 
+            StageRepository stageRepository,
+            UserRepository userRepository,
+            ILogger<ApproverService> logger)
         {
             _context = context;
+            _stageRepository = stageRepository;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
-        public async Task<Employee?> GetNextApproverAsync(string ideaId, int nextStage)
+        public async Task<List<User>> GetNextApproversAsync(long ideaId, int nextStageSequence)
         {
             var idea = await _context.Ideas
+                .Include(i => i.WorkflowDefinition)
+                    .ThenInclude(wd => wd.WorkflowStages)
+                        .ThenInclude(ws => ws.Stage)
                 .Include(i => i.TargetDivision)
                 .Include(i => i.TargetDepartment)
                 .FirstOrDefaultAsync(i => i.Id == ideaId);
 
-            if (idea == null)
+            if (idea?.WorkflowDefinition == null)
             {
-                _logger.LogWarning("Idea {IdeaId} not found for approver detection", ideaId);
-                return null;
+                _logger.LogWarning("Idea {IdeaId} not found or has no workflow definition", ideaId);
+                return new List<User>();
             }
 
-            var requiredRole = await GetRequiredRoleForStageAsync(nextStage, idea.WorkflowType);
-            if (requiredRole == null)
+            var workflowStage = idea.WorkflowDefinition.WorkflowStages
+                .FirstOrDefault(ws => ws.SequenceNumber == nextStageSequence);
+
+            if (workflowStage == null)
             {
-                _logger.LogWarning("No role found for stage {NextStage} and workflow {WorkflowType}", nextStage, idea.WorkflowType);
-                return null;
+                _logger.LogWarning("No workflow stage found for sequence {Sequence} in idea {IdeaId}", nextStageSequence, ideaId);
+                return new List<User>();
             }
 
-            return await GetEmployeeByRoleAsync(requiredRole.Id, idea.TargetDivisionId, idea.TargetDepartmentId);
+            return await _stageRepository.GetApproversForStageAsync(
+                workflowStage.StageId,
+                idea.TargetDivisionId,
+                idea.TargetDepartmentId
+            );
         }
 
-        private async Task<Role?> GetRequiredRoleForStageAsync(int stage, string workflowType)
+        public async Task<User?> GetWorkstreamLeaderAsync(string divisionId, string departmentId)
         {
-            return await _context.Roles
-                .FirstOrDefaultAsync(r => r.ApprovalLevel == stage &&
-                                          (workflowType == "STANDARD" ? r.CanApproveStandard : r.CanApproveHighValue));
+            // Get users with Workstream Leader role in specific department
+            var workstreamLeaders = await _stageRepository.GetApproversForStageAsync(
+                "S01", // Assuming S01 is the stage ID for workstream leaders
+                divisionId,
+                departmentId
+            );
+
+            return workstreamLeaders.FirstOrDefault(u => u.Role.RoleName.Contains("Workstream Leader"));
         }
 
-        public async Task<Employee?> GetWorkstreamLeaderAsync(string divisionId, string departmentId)
+        public async Task<List<User>> GetUsersByRoleAsync(string roleId, string? divisionId = null, string? departmentId = null)
         {
-            return await GetEmployeeByRoleAsync("R04", divisionId, departmentId);
+            var users = await _userRepository.GetUsersByRoleAsync(roleId);
+
+            // Apply division/department filtering
+            if (!string.IsNullOrEmpty(departmentId))
+            {
+                users = users.Where(u => u.Employee?.DepartementId == departmentId).ToList();
+            }
+            else if (!string.IsNullOrEmpty(divisionId))
+            {
+                users = users.Where(u => u.Employee?.DivisiId == divisionId).ToList();
+            }
+
+            return users.Where(u => u.Employee?.EmploymentStatus == "Active").ToList();
         }
 
-        public async Task<Employee?> GetEmployeeByRoleAsync(string roleId, string? divisionId = null, string? departmentId = null)
+        public async Task<bool> IsUserAuthorizedForStageAsync(long userId, long ideaId, int stage)
         {
-            var query = _context.Employees
-                .Include(e => e.User)
-                .ThenInclude(u => u!.Role)
-                .Where(e => e.User != null && 
-                           e.User.RoleId == roleId && 
-                           e.User.IsActive && 
-                           e.EmploymentStatus == "Active");
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return false;
 
-            // Add division/department filters for specific roles
-            if (new[] { "R04", "R06" }.Contains(roleId)) // Department/Workstream specific roles
+            var idea = await _context.Ideas
+                .Include(i => i.WorkflowDefinition)
+                    .ThenInclude(wd => wd.WorkflowStages)
+                        .ThenInclude(ws => ws.Stage)
+                            .ThenInclude(s => s.StageApprovers)
+                .FirstOrDefaultAsync(i => i.Id == ideaId);
+
+            if (idea?.WorkflowDefinition == null) return false;
+
+            var workflowStage = idea.WorkflowDefinition.WorkflowStages
+                .FirstOrDefault(ws => ws.SequenceNumber == stage);
+
+            if (workflowStage == null) return false;
+
+            // Check if user's role is authorized for this stage
+            var isRoleAuthorized = workflowStage.Stage.StageApprovers
+                .Any(sa => sa.RoleId == user.RoleId);
+
+            if (!isRoleAuthorized) return false;
+
+            // Check division/department constraints
+            if (user.Employee == null) return false;
+
+            if (IsDepartmentSpecificRole(user.RoleId))
             {
-                if (!string.IsNullOrEmpty(departmentId))
-                {
-                    query = query.Where(e => e.DepartementId == departmentId);
-                }
-                if (!string.IsNullOrEmpty(divisionId))
-                {
-                    query = query.Where(e => e.DivisiId == divisionId);
-                }
+                return user.Employee.DepartementId == idea.TargetDepartmentId &&
+                       user.Employee.DivisiId == idea.TargetDivisionId;
             }
-            else if (roleId == "R07") // Division specific role
+            else if (IsDivisionSpecificRole(user.RoleId))
             {
-                if (!string.IsNullOrEmpty(divisionId))
-                {
-                    query = query.Where(e => e.DivisiId == divisionId);
-                }
-            }
-            // Company-wide roles (R08, R09, R10, R11) don't need division/department filter
-
-            // --- REVISED LOGIC: Sequential Search (Department -> Division -> Company) ---
-
-            Employee? approver = null;
-
-            // 1. Try to find at the most specific level (Department, if applicable)
-            if (new[] { "R04", "R06" }.Contains(roleId) && !string.IsNullOrEmpty(departmentId))
-            {
-                approver = await query.FirstOrDefaultAsync();
+                return user.Employee.DivisiId == idea.TargetDivisionId;
             }
 
-            // 2. If not found, try at the Division level (if applicable)
-            if (approver == null && new[] { "R04", "R06", "R07" }.Contains(roleId) && !string.IsNullOrEmpty(divisionId))
-            {
-                // Re-build query for division level
-                var divisionQuery = _context.Employees
-                    .Include(e => e.User).ThenInclude(u => u!.Role)
-                    .Where(e => e.User != null && e.User.RoleId == roleId && e.User.IsActive && e.EmploymentStatus == "Active" && e.DivisiId == divisionId);
-                
-                approver = await divisionQuery
-                    .OrderBy(e => e.User!.IsActing)
-                    .ThenByDescending(e => e.User!.CreatedAt)
-                    .FirstOrDefaultAsync();
-            }
-
-            // 3. If still not found, try at the company-wide level
-            if (approver == null)
-            {
-                // Re-build query for company-wide
-                 var companyQuery = _context.Employees
-                    .Include(e => e.User).ThenInclude(u => u!.Role)
-                    .Where(e => e.User != null && e.User.RoleId == roleId && e.User.IsActive && e.EmploymentStatus == "Active");
-
-                approver = await companyQuery
-                    .OrderBy(e => e.User!.IsActing)
-                    .ThenByDescending(e => e.User!.CreatedAt)
-                    .FirstOrDefaultAsync();
-            }
-            
-            if (approver == null)
-            {
-                 _logger.LogWarning("No active approver found for role {RoleId} at any level (Dept: {DepartmentId}, Div: {DivisionId}, Company-wide)", 
-                    roleId, departmentId, divisionId);
-            }
-
-            return approver;
+            return true; // Company-wide role
         }
 
+        private bool IsDepartmentSpecificRole(string roleId)
+        {
+            var departmentRoles = new[] { "R04", "R06", "R16" };
+            return departmentRoles.Contains(roleId);
+        }
+
+        private bool IsDivisionSpecificRole(string roleId)
+        {
+            var divisionRoles = new[] { "R07", "R13" };
+            return divisionRoles.Contains(roleId);
+        }
     }
 }

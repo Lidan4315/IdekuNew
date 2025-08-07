@@ -1,4 +1,4 @@
-// Models/Entities/ApprovalHistory.cs
+// Models/Entities/ApprovalHistory.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -12,8 +12,8 @@ namespace Ideku.Models.Entities
         public int Id { get; set; }
 
         [Required]
-        [Column("idea_id", TypeName = "varchar(20)")]
-        public string IdeaId { get; set; }
+        [Column("idea_id")]
+        public long IdeaId { get; set; } // Changed to bigint
         [ForeignKey("IdeaId")]
         public Idea Idea { get; set; } = null!;
 
@@ -26,16 +26,10 @@ namespace Ideku.Models.Entities
         public string Action { get; set; } = string.Empty; // APPROVE, REJECT, REQUEST_INFO, MILESTONE
 
         [Required]
-        [Column("approver_id", TypeName = "varchar(10)")]
-        public string ApproverId { get; set; } = string.Empty;
-        [ForeignKey("ApproverId")]
-        public Employee Approver { get; set; } = null!;
-
-        [Required]
-        [Column("approver_role_id", TypeName = "varchar(10)")]
-        public string ApproverRoleId { get; set; } = string.Empty;
-        [ForeignKey("ApproverRoleId")]
-        public Role ApproverRole { get; set; } = null!;
+        [Column("approver_user_id")]
+        public long ApproverUserId { get; set; } // Now references users.id
+        [ForeignKey("ApproverUserId")]
+        public User ApproverUser { get; set; } = null!;
 
         [Column("comments", TypeName = "nvarchar(1000)")]
         public string? Comments { get; set; }
@@ -54,5 +48,9 @@ namespace Ideku.Models.Entities
 
         [Column("user_agent", TypeName = "nvarchar(500)")]
         public string? UserAgent { get; set; }
+
+        // Navigation Property to Employee (through User)
+        [NotMapped]
+        public Employee? Approver => ApproverUser?.Employee;
     }
 }

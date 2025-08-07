@@ -1,4 +1,4 @@
-// Models/Entities/IdeaMilestone.cs
+// Models/Entities/IdeaMilestone.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,11 +9,11 @@ namespace Ideku.Models.Entities
     {
         [Key]
         [Column("id")]
-        public int Id { get; set; }
+        public long Id { get; set; } // Changed to bigint
 
         [Required]
-        [Column("idea_id", TypeName = "varchar(20)")]
-        public string IdeaId { get; set; }
+        [Column("idea_id")]
+        public long IdeaId { get; set; } // Changed to bigint
         [ForeignKey("IdeaId")]
         public Idea Idea { get; set; } = null!;
 
@@ -45,20 +45,27 @@ namespace Ideku.Models.Entities
         public string? Notes { get; set; }
 
         [Required]
-        [Column("created_by", TypeName = "varchar(10)")]
-        public string CreatedBy { get; set; } = string.Empty;
-        [ForeignKey("CreatedBy")]
-        public Employee Creator { get; set; } = null!;
+        [Column("created_by_user_id")]
+        public long CreatedByUserId { get; set; } // Now references users.id
+        [ForeignKey("CreatedByUserId")]
+        public User CreatedByUser { get; set; } = null!;
 
-        [Column("assigned_to", TypeName = "varchar(10)")]
-        public string? AssignedTo { get; set; }
-        [ForeignKey("AssignedTo")]
-        public Employee? Assignee { get; set; }
+        [Column("assigned_to_user_id")]
+        public long? AssignedToUserId { get; set; } // Now references users.id
+        [ForeignKey("AssignedToUserId")]
+        public User? AssignedToUser { get; set; }
 
         [Column("created_date")]
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         [Column("updated_date")]
         public DateTime? UpdatedDate { get; set; }
+
+        // Navigation Properties to Employees (through Users)
+        [NotMapped]
+        public Employee? Creator => CreatedByUser?.Employee;
+
+        [NotMapped]
+        public Employee? Assignee => AssignedToUser?.Employee;
     }
 }

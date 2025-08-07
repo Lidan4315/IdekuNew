@@ -1,12 +1,17 @@
-// Models/Entities/RolePermission.cs
+// Models/Entities/RoleFeaturePermission.cs (NEW - replaces RolePermission)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Ideku.Models.Entities
 {
-    [Table("role_permissions")]
-    public class RolePermission
+    [Table("role_feature_permissions")]
+    public class RoleFeaturePermission
     {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+
+        [Required]
         [Column("role_id", TypeName = "varchar(10)")]
         public string RoleId { get; set; } = string.Empty;
 

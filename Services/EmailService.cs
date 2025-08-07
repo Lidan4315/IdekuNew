@@ -1,4 +1,4 @@
-// Services/EmailService.cs
+// Services/EmailService.cs (Updated for new schema)
 using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
@@ -9,50 +9,54 @@ namespace Ideku.Services
     {
         private readonly EmailSettings _emailSettings;
         private readonly ILogger<EmailService> _logger;
+        private readonly IdeaCodeService _ideaCodeService;
 
-        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger)
+        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<EmailService> logger, IdeaCodeService ideaCodeService)
         {
             _emailSettings = emailSettings.Value;
             _logger = logger;
+            _ideaCodeService = ideaCodeService;
         }
 
-        public async Task<bool> SendIdeaSubmissionNotificationAsync(string ideaTitle, string submitterName, string submitterId, string ideaId, List<string> validatorEmails)
+        public async Task<bool> SendIdeaSubmissionNotificationAsync(string ideaTitle, string submitterName, string submitterId, long ideaId, List<string> validatorEmails)
         {
             try
             {
+                var displayId = _ideaCodeService.FormatIdeaDisplayId(ideaId);
                 var subject = $"[Ideku] New Idea Submission Requires Validation - {ideaTitle}";
-                var body = GenerateValidationEmailBody(ideaTitle, submitterName, submitterId, ideaId);
+                var body = GenerateValidationEmailBody(ideaTitle, submitterName, submitterId, displayId, ideaId);
 
                 foreach (var email in validatorEmails)
                 {
                     await SendEmailAsync(email, subject, body);
                 }
 
-                _logger.LogInformation($"Validation emails sent successfully for idea {ideaId} to {validatorEmails.Count} validators");
+                _logger.LogInformation($"Validation emails sent successfully for idea {displayId} (ID: {ideaId}) to {validatorEmails.Count} validators");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to send validation emails for idea {ideaId}");
+                _logger.LogError(ex, $"Failed to send validation emails for idea ID {ideaId}");
                 return false;
             }
         }
 
-        public async Task<bool> SendIdeaStatusUpdateAsync(string recipientEmail, string ideaTitle, string newStatus, string? comments = null)
+        public async Task<bool> SendIdeaStatusUpdateAsync(string recipientEmail, string ideaTitle, long ideaId, string newStatus, string? comments = null)
         {
             try
             {
+                var displayId = _ideaCodeService.FormatIdeaDisplayId(ideaId);
                 var subject = $"[Ideku] Idea Status Update - {ideaTitle}";
-                var body = GenerateStatusUpdateEmailBody(ideaTitle, newStatus, comments);
+                var body = GenerateStatusUpdateEmailBody(ideaTitle, displayId, newStatus, comments);
 
                 await SendEmailAsync(recipientEmail, subject, body);
 
-                _logger.LogInformation($"Status update email sent to {recipientEmail} for idea: {ideaTitle}");
+                _logger.LogInformation($"Status update email sent to {recipientEmail} for idea: {displayId}");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to send status update email to {recipientEmail}");
+                _logger.LogError(ex, $"Failed to send status update email to {recipientEmail} for idea ID {ideaId}");
                 return false;
             }
         }
@@ -93,7 +97,7 @@ namespace Ideku.Services
             await client.SendMailAsync(mailMessage);
         }
 
-        private string GenerateValidationEmailBody(string ideaTitle, string submitterName, string submitterId, string ideaId)
+        private string GenerateValidationEmailBody(string ideaTitle, string submitterName, string submitterId, string displayId, long ideaId)
         {
             var baseUrl = _emailSettings.BaseUrl;
             var validationUrl = $"{baseUrl}/Validation/Review/{ideaId}";
@@ -110,6 +114,7 @@ namespace Ideku.Services
         .header h1 {{ margin: 0; font-size: 24px; }}
         .content {{ line-height: 1.6; color: #333; }}
         .idea-details {{ background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; }}
+        .idea-id {{ background-color: #e3f2fd; color: #1565c0; padding: 8px 12px; border-radius: 4px; font-weight: bold; display: inline-block; margin: 10px 0; }}
         .action-button {{ display: inline-block; background-color: #1b6ec2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }}
         .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }}
     </style>
@@ -126,10 +131,10 @@ namespace Ideku.Services
             <p>A new idea has been submitted in the Ideku system and requires your validation:</p>
             
             <div class='idea-details'>
+                <div class='idea-id'>{displayId}</div>
                 <h3>{ideaTitle}</h3>
                 <p><strong>Submitted by:</strong> {submitterName} ({submitterId})</p>
                 <p><strong>Submission Date:</strong> {DateTime.Now:MMMM dd, yyyy HH:mm}</p>
-                <p><strong>Idea ID:</strong> #{ideaId}</p>
             </div>
             
             <p>Please review the idea submission and provide your validation decision:</p>
@@ -153,11 +158,11 @@ namespace Ideku.Services
 </html>";
         }
 
-        private string GenerateStatusUpdateEmailBody(string ideaTitle, string newStatus, string? comments)
+        private string GenerateStatusUpdateEmailBody(string ideaTitle, string displayId, string newStatus, string? comments)
         {
             var statusColor = newStatus switch
             {
-                "Approved" => "#28a745",
+                "Approved" or "Completed" => "#28a745",
                 "Rejected" => "#dc3545",
                 "Under Review" => "#ffc107",
                 _ => "#6c757d"
@@ -165,7 +170,7 @@ namespace Ideku.Services
 
             var statusIcon = newStatus switch
             {
-                "Approved" => "✅",
+                "Approved" or "Completed" => "✅",
                 "Rejected" => "❌",
                 "Under Review" => "🔍",
                 _ => "ℹ️"
@@ -182,6 +187,7 @@ namespace Ideku.Services
         .header {{ background: linear-gradient(135deg, #1b6ec2, #0077cc); color: white; padding: 20px; border-radius: 8px 8px 0 0; margin: -30px -30px 30px -30px; }}
         .header h1 {{ margin: 0; font-size: 24px; }}
         .content {{ line-height: 1.6; color: #333; }}
+        .idea-id {{ background-color: #e3f2fd; color: #1565c0; padding: 8px 12px; border-radius: 4px; font-weight: bold; display: inline-block; margin: 10px 0; }}
         .status-badge {{ display: inline-block; background-color: {statusColor}; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }}
         .comments {{ background-color: #f8f9fa; padding: 15px; border-left: 4px solid {statusColor}; margin: 20px 0; }}
         .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }}
@@ -198,6 +204,7 @@ namespace Ideku.Services
             
             <p>The status of your idea submission has been updated:</p>
             
+            <div class='idea-id'>{displayId}</div>
             <h3>{ideaTitle}</h3>
             
             <p><strong>New Status:</strong> <span class='status-badge'>{newStatus}</span></p>
@@ -227,7 +234,7 @@ namespace Ideku.Services
         private string GenerateGenericEmailBody(string subject, string message, string actionUrl)
         {
             var baseUrl = _emailSettings.BaseUrl;
-            var fullActionUrl = $"{baseUrl}{actionUrl}";
+            var fullActionUrl = string.IsNullOrEmpty(actionUrl) ? baseUrl : $"{baseUrl}{actionUrl}";
 
             return $@"
 <!DOCTYPE html>
@@ -255,10 +262,11 @@ namespace Ideku.Services
             
             <p>{message}</p>
             
+            {(string.IsNullOrEmpty(actionUrl) ? "" : $@"
             <a href='{fullActionUrl}' class='action-button' style='color: white !important;'>View Details</a>
             
             <p>If you cannot click the button above, copy and paste this URL into your browser:</p>
-            <p style='word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;'>{fullActionUrl}</p>
+            <p style='word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;'>{fullActionUrl}</p>")}
             
             <p>Best regards,<br>
             The Ideku Team</p>

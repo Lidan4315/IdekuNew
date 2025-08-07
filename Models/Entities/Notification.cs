@@ -1,4 +1,4 @@
-// Models/Entities/Notification.cs
+// Models/Entities/Notification.cs (Updated - no recipient_id, uses idea relation)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -11,14 +11,8 @@ namespace Ideku.Models.Entities
         [Column("id")]
         public int Id { get; set; }
 
-        [Required]
-        [Column("recipient_id", TypeName = "varchar(10)")]
-        public string RecipientId { get; set; } = string.Empty;
-        [ForeignKey("RecipientId")]
-        public Employee Recipient { get; set; } = null!;
-
-        [Column("idea_id", TypeName = "varchar(20)")]
-        public string? IdeaId { get; set; }
+        [Column("idea_id")]
+        public long? IdeaId { get; set; } // Changed to bigint
         [ForeignKey("IdeaId")]
         public Idea? Idea { get; set; }
 

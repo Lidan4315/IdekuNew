@@ -1,4 +1,4 @@
-// Models/Entities/Permission.cs
+// Models/Entities/Permission.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -26,6 +26,6 @@ namespace Ideku.Models.Entities
         public bool IsActive { get; set; } = true;
 
         // Navigation Properties
-        public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+        public ICollection<RoleFeaturePermission> RoleFeaturePermissions { get; set; } = new List<RoleFeaturePermission>();
     }
 }

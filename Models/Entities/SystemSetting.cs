@@ -1,4 +1,4 @@
-// Models/Entities/SystemSetting.cs
+// Models/Entities/SystemSetting.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -30,12 +30,16 @@ namespace Ideku.Models.Entities
         public bool IsSystem { get; set; } = false;
 
         [Required]
-        [Column("updated_by", TypeName = "varchar(10)")]
-        public string UpdatedBy { get; set; } = string.Empty;
-        [ForeignKey("UpdatedBy")]
-        public Employee UpdatedByEmployee { get; set; } = null!;
+        [Column("updated_by_user_id")]
+        public long UpdatedByUserId { get; set; } // Now references users.id
+        [ForeignKey("UpdatedByUserId")]
+        public User UpdatedByUser { get; set; } = null!;
 
         [Column("updated_date")]
         public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
+
+        // Navigation Property to Employee (through User)
+        [NotMapped]
+        public Employee? UpdatedByEmployee => UpdatedByUser?.Employee;
     }
 }

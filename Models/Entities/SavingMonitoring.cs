@@ -1,4 +1,4 @@
-// Models/Entities/SavingMonitoring.cs
+// Models/Entities/SavingMonitoring.cs (Updated)
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,11 +9,11 @@ namespace Ideku.Models.Entities
     {
         [Key]
         [Column("id")]
-        public int Id { get; set; }
+        public long Id { get; set; } // Changed to bigint
 
         [Required]
-        [Column("idea_id", TypeName = "varchar(20)")]
-        public string IdeaId { get; set; }
+        [Column("idea_id")]
+        public long IdeaId { get; set; } // Changed to bigint
         [ForeignKey("IdeaId")]
         public Idea Idea { get; set; } = null!;
 
@@ -52,15 +52,15 @@ namespace Ideku.Models.Entities
         public string? MonitoringNotes { get; set; }
 
         [Required]
-        [Column("reported_by", TypeName = "varchar(10)")]
-        public string ReportedBy { get; set; } = string.Empty;
-        [ForeignKey("ReportedBy")]
-        public Employee Reporter { get; set; } = null!;
+        [Column("reported_by_user_id")]
+        public long ReportedByUserId { get; set; } // Now references users.id
+        [ForeignKey("ReportedByUserId")]
+        public User ReportedByUser { get; set; } = null!;
 
-        [Column("reviewed_by", TypeName = "varchar(10)")]
-        public string? ReviewedBy { get; set; }
-        [ForeignKey("ReviewedBy")]
-        public Employee? Reviewer { get; set; }
+        [Column("reviewed_by_user_id")]
+        public long? ReviewedByUserId { get; set; } // Now references users.id
+        [ForeignKey("ReviewedByUserId")]
+        public User? ReviewedByUser { get; set; }
 
         [Column("review_status", TypeName = "varchar(20)")]
         public string ReviewStatus { get; set; } = "Pending"; // Pending, Approved, Questioned
@@ -70,5 +70,12 @@ namespace Ideku.Models.Entities
 
         [Column("updated_date")]
         public DateTime? UpdatedDate { get; set; }
+
+        // Navigation Properties to Employees (through Users)
+        [NotMapped]
+        public Employee? Reporter => ReportedByUser?.Employee;
+
+        [NotMapped]
+        public Employee? Reviewer => ReviewedByUser?.Employee;
     }
 }

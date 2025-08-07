@@ -1,31 +1,35 @@
+// Controllers/HomeController.cs (Updated for new schema)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Diagnostics;
 using Ideku.Models;
 using Ideku.Services;
+using Ideku.Helpers;
 
 namespace Ideku.Controllers
 {
-    [Authorize] // Require authentication untuk semua actions
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly IdeaService _ideaService;
         private readonly AuthService _authService;
+        private readonly IdeaDisplayHelper _ideaDisplayHelper;
 
-        public HomeController(IdeaService ideaService, AuthService authService)
+        public HomeController(IdeaService ideaService, AuthService authService, IdeaDisplayHelper ideaDisplayHelper)
         {
             _ideaService = ideaService;
             _authService = authService;
+            _ideaDisplayHelper = ideaDisplayHelper;
         }
 
         public async Task<IActionResult> Index()
         {
             try
             {
-                // 🔥 FIX: Mengambil statistik global untuk semua ide
+                // Get global statistics for dashboard
                 var (total, pending, approved) = await _ideaService.GetGlobalIdeaStatsAsync();
 
-                // Pass data ke View via ViewBag
+                // Pass data to View via ViewBag
                 ViewBag.TotalIdeas = total;
                 ViewBag.PendingIdeas = pending;
                 ViewBag.ApprovedIdeas = approved;
@@ -35,7 +39,6 @@ namespace Ideku.Controllers
             }
             catch (Exception ex)
             {
-                // Log error
                 TempData["ErrorMessage"] = "Unable to load dashboard data.";
                 ViewBag.TotalIdeas = 0;
                 ViewBag.PendingIdeas = 0;
@@ -61,7 +64,6 @@ namespace Ideku.Controllers
         {
             try
             {
-                // 🔥 FIX: Mengambil statistik global untuk semua ide
                 var (total, pending, approved) = await _ideaService.GetGlobalIdeaStatsAsync();
 
                 return Json(new { 
