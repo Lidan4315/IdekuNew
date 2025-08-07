@@ -46,6 +46,12 @@
                             <span>Need Approval</span>
                         </a>
                     </li>
+                    <li>
+                        <a asp-controller="Milestone" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Milestone" ? "active" : "")">
+                            <i class="bi bi-flag-fill"></i>
+                            <span>Milestone</span>
+                        </a>
+                    </li>
                 }
                 
                 @if (User.Identity.IsAuthenticated && User.IsInRole("SuperAdmin"))
