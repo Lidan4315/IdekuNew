@@ -1,81 +1,76 @@
-@model Ideku.Models.ViewModels.Milestone.MilestoneIndexViewModel
-
 @{
-    ViewData["Title"] = "Milestones & Monitoring";
+    ViewData["Title"] = "Daftar Ide untuk Milestone";
 }
 
-<div class="page-header mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="h3 mb-0">Milestones & Monitoring</h1>
-            <p class="text-muted">Track and update the progress of idea: @Model.Idea.IdeaName</p>
-        </div>
-        <div>
-            <a asp-controller="Idea" asp-action="Details" asp-route-id="@Model.IdeaId" class="btn btn-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to Idea Details
-            </a>
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Daftar Ide (Tahap Milestone)</h1>
+    </div>
+
+    <!-- Content Row -->
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Pilih Idea untuk Melihat Milestone</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>ID Idea</th>
+                                    <th>Judul Idea</th>
+                                    <th>Pengusul</th>
+                                    <th>Tanggal Diajukan</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Contoh Data Statis -->
+                                <tr>
+                                    <td>IMS-00001</td>
+                                    <td>Pengembangan Sistem Absensi Online</td>
+                                    <td>Budi Santoso</td>
+                                    <td>10/07/2025</td>
+                                    <td>
+                                        <a href="/Milestone/Details/IMS-00001" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-tasks"></i> Lihat Milestone
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>IMS-00002</td>
+                                    <td>Optimalisasi Proses Produksi dengan Mesin Baru</td>
+                                    <td>Citra Lestari</td>
+                                    <td>15/07/2025</td>
+                                    <td>
+                                        <a href="/Milestone/Details/IMS-00002" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-tasks"></i> Lihat Milestone
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>IMS-00003</td>
+                                    <td>Program Pelatihan Karyawan Digital Marketing</td>
+                                    <td>Doni Firmansyah</td>
+                                    <td>20/07/2025</td>
+                                    <td>
+                                        <a href="/Milestone/Details/IMS-00003" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-tasks"></i> Lihat Milestone
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Milestones Section -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-flag me-2"></i>Milestones</h5>
-            </div>
-            <div class="card-body">
-                @if (Model.Milestones.Any())
-                {
-                    <ul class="list-group">
-                        @foreach (var milestone in Model.Milestones)
-                        {
-                            <li class="list-group-item">
-                                <strong>@milestone.MilestoneTitle</strong><br/>
-                                <small class="text-muted">Status: @milestone.Status | Created: @milestone.CreatedDate.ToShortDateString()</small>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p class="text-muted">No milestones have been added yet.</p>
-                }
-            </div>
-            <div class="card-footer">
-                <h6>Add New Milestone</h6>
-                <form asp-action="CreateMilestone" method="post">
-                    <input type="hidden" name="ideaId" value="@Model.IdeaId" />
-                    <div class="mb-3">
-                        <textarea name="milestoneText" class="form-control" rows="3" placeholder="Enter milestone description"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Milestone</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Saving Monitoring Section -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Saving Monitoring</h5>
-            </div>
-            <div class="card-body">
-                <form asp-action="UpdateMonitoring" method="post">
-                    <input type="hidden" name="ideaId" value="@Model.IdeaId" />
-                    <div class="mb-3">
-                        <label class="form-label">Planned Saving</label>
-                        <input type="number" name="plannedSaving" class="form-control" value="@Model.SavingMonitoring.PlannedSaving" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Actual Saving</label>
-                        <input type="number" name="actualSaving" class="form-control" value="@Model.SavingMonitoring.ActualSaving" />
-                    </div>
-                    <button type="submit" class="btn btn-success">Update Monitoring</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@section Scripts {
+    <!-- Jika perlu, tambahkan script khusus untuk halaman ini di sini -->
+}

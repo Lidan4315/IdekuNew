@@ -19,12 +19,6 @@
             <a asp-action="Index" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-2"></i>Back to List
             </a>
-            @if (ViewBag.CanManageMilestones == true)
-            {
-                <a asp-controller="Milestone" asp-action="Index" asp-route-id="@Model.Id" class="btn btn-info">
-                    <i class="bi bi-flag me-2"></i>Manage Milestones
-                </a>
-            }
         </div>
     </div>
 </div>

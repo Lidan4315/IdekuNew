@@ -25,8 +25,15 @@ namespace Ideku.Controllers
             _approverService = approverService;
         }
 
-        // GET: /Milestone/Index/5
-        public async Task<IActionResult> Index(string id)
+        public IActionResult Index()
+        {
+            // Logic to get list of ideas for milestone will be added here later.
+            // For now, just return the view.
+            return View();
+        }
+
+        // GET: /Milestone/Details/5
+        public async Task<IActionResult> Details(string id)
         {
             var idea = await _context.Ideas
                 .Include(i => i.Milestones)
@@ -87,7 +94,7 @@ namespace Ideku.Controllers
             _context.IdeaMilestones.Add(milestone);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("Index", new { id = ideaId });
+            return RedirectToAction("Details", new { id = ideaId });
         }
 
         // POST: /Milestone/UpdateMonitoring
@@ -98,7 +105,7 @@ namespace Ideku.Controllers
             if (!ModelState.IsValid)
             {
                 // If model is not valid, redisplay the page with existing data
-                return RedirectToAction("Index", new { id = model.IdeaId });
+                return RedirectToAction("Details", new { id = model.IdeaId });
             }
 
             var idea = await _context.Ideas.FindAsync(model.IdeaId);
@@ -139,7 +146,7 @@ namespace Ideku.Controllers
 
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("Index", new { id = model.IdeaId });
+            return RedirectToAction("Details", new { id = model.IdeaId });
         }
     }
 }
